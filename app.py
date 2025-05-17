@@ -133,9 +133,54 @@ def get_users(current_user):
 def handle_connect():
     token = request.args.get('token')
     try:
-        jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        
+        # Update user status to idle when connecting
+        db.SetUserStatus(username, 'idle')
+        
+        # Broadcast updated user list to all clients
+        users = db.GetAllUsers()
+        emit('userList', {'users': users}, broadcast=True)
+        
+        return True
     except:
         return False
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        
+        # Update user status to offline when disconnecting
+        db.SetUserStatus(username, 'offline')
+        
+        # Broadcast updated user list to all clients
+        users = db.GetAllUsers()
+        emit('userList', {'users': users}, broadcast=True)
+    except:
+        pass
+
+@socketio.on('update_status')
+def handle_status_update(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        new_status = data['status']
+        
+        # Update user status
+        db.SetUserStatus(username, new_status)
+        
+        # Get updated user data
+        user = db.GetUser(username)
+        
+        # Broadcast status update to all clients
+        emit('userStatusUpdate', {'user': user}, broadcast=True)
+    except Exception as e:
+        emit('error', {'message': str(e)})
 
 @socketio.on('join_chat')
 def handle_join_chat(data):

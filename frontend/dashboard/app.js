@@ -223,8 +223,9 @@ function sortUsersByStatus(users) {
 function createUserElements(users) {
     userGrid.innerHTML = '';
     
-    // Sort users by status before creating elements
-    const sortedUsers = sortUsersByStatus(users);
+    // Filter out current user and sort remaining users by status
+    const filteredUsers = users.filter(user => user.username !== currentUsername);
+    const sortedUsers = sortUsersByStatus(filteredUsers);
     
     sortedUsers.forEach(user => {
         const userElement = document.createElement('div');
@@ -610,6 +611,66 @@ blurOverlay.addEventListener('click', (e) => {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     fetchUsers();
-    // Refresh user list every 30 seconds
-    setInterval(fetchUsers, 30000);
+    
+    // Socket.IO connection
+    const token = localStorage.getItem('token');
+    const socket = io('http://localhost:5000', {
+        query: { token }
+    });
+    
+    socket.on('connect', () => {
+        console.log('Socket.IO connection established');
+    });
+    
+    socket.on('userStatusUpdate', (data) => {
+        updateUserStatus(data.user);
+    });
+    
+    socket.on('userList', (data) => {
+        createUserElements(data.users);
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('Socket.IO connection closed');
+        // Try to reconnect after 5 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 5000);
+    });
+    
+    socket.on('error', (error) => {
+        console.error('Socket.IO error:', error);
+    });
 });
+
+// Update specific user's status
+function updateUserStatus(updatedUser) {
+    const userElements = document.querySelectorAll('.user-bubble');
+    userElements.forEach(element => {
+        const username = element.querySelector('.user-name').textContent;
+        if (username === updatedUser.username) {
+            // Update status class
+            const avatar = element.querySelector('.user-avatar');
+            avatar.className = `user-avatar ${updatedUser.status}`;
+            
+            // Update status text
+            const statusElement = element.querySelector('.user-status');
+            statusElement.className = `user-status ${updatedUser.status}`;
+            
+            // Translate status to Turkish
+            let statusText = '';
+            switch(updatedUser.status) {
+                case 'idle':
+                    statusText = 'Aktif';
+                    break;
+                case 'busy':
+                    statusText = 'Meşgul';
+                    break;
+                case 'offline':
+                    statusText = 'Çevrimdışı';
+                    break;
+            }
+            statusElement.textContent = statusText;
+        }
+    });
+}
