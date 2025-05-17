@@ -1,0 +1,8 @@
+import bcrypt
+def HashPassword(password):
+    bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(bytes,salt)
+    return hashed
+def CheckPassword(password,HashedPassword):
+    return bcrypt.checkpw(password.encode("utf-8"),HashedPassword)
