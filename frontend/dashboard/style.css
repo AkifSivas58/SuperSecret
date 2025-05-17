@@ -398,9 +398,8 @@ main {
 .chat-window {
     display: none;
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
     width: 400px;
     height: 550px;
     background-color: var(--panel-bg);
@@ -415,7 +414,10 @@ main {
     max-height: 90vh;
     backdrop-filter: blur(15px);
     border: 2px solid var(--accent-cyber);
-    transition: all 0.3s ease;
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transform-style: preserve-3d;
 }
 
 .blur-overlay {
@@ -437,7 +439,9 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: move;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
 }
 
 .chat-user-info {
@@ -578,7 +582,18 @@ main {
 /* For better drag performance */
 .chat-window.dragging {
     user-select: none;
-    opacity: 0.9;
+    cursor: grabbing !important;
+    transition: none !important;
+    opacity: 0.95;
+}
+
+.chat-window.dragging * {
+    cursor: grabbing !important;
+    pointer-events: none;
+}
+
+.chat-window.dragging .chat-header {
+    cursor: grabbing !important;
 }
 
 /* Responsive chat window */

@@ -162,7 +162,7 @@ animate();
 
 // Mock user data (in a real app, this would come from an API)
 const users = [
-    { id: 1, username: 'Neuro_Mind78', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
+    { id: 1, username: 'Erdem ÇANKAYA', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
     { id: 2, username: 'CyberThought', avatar: '../../assets/Uzaylı_2.png', status: 'busy' },
     { id: 3, username: 'QuantumBrain', avatar: '../../assets/Uzaylı_3.png', status: 'offline' },
     { id: 4, username: 'SynapticLink', avatar: '../../assets/Uzaylı_4.png', status: 'busy' },
@@ -349,10 +349,15 @@ function openChatWindow(userName, userAvatar) {
 
 // Center chat window in the screen
 function centerChatWindow() {
-    // Reset any inline positioning
-    chatWindow.style.left = '50%';
-    chatWindow.style.top = '50%';
-    chatWindow.style.transform = 'translate(-50%, -50%)';
+    const rect = chatWindow.getBoundingClientRect();
+    currentX = (window.innerWidth - rect.width) / 2;
+    currentY = (window.innerHeight - rect.height) / 2;
+    chatWindow.style.transform = 'none';
+    chatWindow.style.top = '0';
+    chatWindow.style.left = '0';
+    setTransform(currentX, currentY);
+    xOffset = currentX;
+    yOffset = currentY;
 }
 
 // Close chat window
@@ -361,7 +366,7 @@ function closeChatWindow() {
     blurOverlay.style.display = 'none'; // Hide blur overlay
     chatMessages.innerHTML = ''; // Clear chat history
     
-    // Reset window to center position and default size for next time
+    // Reset window position for next time
     centerChatWindow();
     chatWindow.style.width = '400px';
     chatWindow.style.height = '550px';
@@ -407,59 +412,111 @@ chatInput.addEventListener('keypress', (e) => {
     }
 });
 
-// Close chat window
-btnClose.addEventListener('click', closeChatWindow);
+// Close chat window button
+btnClose.addEventListener('click', () => {
+    closeChatWindow();
+});
 
 // Make the chat window draggable
 let isDragging = false;
-let offsetX, offsetY;
+let currentX = 0;
+let currentY = 0;
+let initialX = 0;
+let initialY = 0;
+let xOffset = 0;
+let yOffset = 0;
+let rafId = null;
 
-chatHeader.addEventListener('mousedown', (e) => {
+function handleDragStart(e) {
+    if (!e.target.closest('.chat-header')) return;
+    
     isDragging = true;
     chatWindow.classList.add('dragging');
-    
-    // Get the current position of the element
-    const rect = chatWindow.getBoundingClientRect();
-    
-    // Calculate the offset of the mouse cursor from the top-left corner of the element
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
-    
-    // Prevent default browser drag behavior
+
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+
     e.preventDefault();
-});
+}
 
-document.addEventListener('mousemove', (e) => {
+function handleDrag(e) {
     if (!isDragging) return;
-    
-    // Calculate the new position
-    const x = e.clientX - offsetX;
-    const y = e.clientY - offsetY;
-    
-    // Apply the new position
-    chatWindow.style.transform = 'none'; // Remove translate transform
-    chatWindow.style.left = `${x}px`;
-    chatWindow.style.top = `${y}px`;
-    
-    // Keep window within viewport
-    const rect = chatWindow.getBoundingClientRect();
-    if (rect.right > window.innerWidth) {
-        chatWindow.style.left = `${window.innerWidth - rect.width}px`;
-    }
-    if (rect.bottom > window.innerHeight) {
-        chatWindow.style.top = `${window.innerHeight - rect.height}px`;
-    }
-    if (rect.left < 0) {
-        chatWindow.style.left = '0px';
-    }
-    if (rect.top < 0) {
-        chatWindow.style.top = '0px';
-    }
-});
 
-document.addEventListener('mouseup', () => {
+    e.preventDefault();
+
+    // Calculate the new position
+    currentX = e.clientX - initialX;
+    currentY = e.clientY - initialY;
+
+    // Keep window within viewport bounds
+    const rect = chatWindow.getBoundingClientRect();
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+
+    // Allow dragging to screen edges
+    currentX = Math.max(0, Math.min(currentX, winWidth - rect.width));
+    currentY = Math.max(0, Math.min(currentY, winHeight - rect.height));
+
+    // Use requestAnimationFrame for smooth animation
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+    }
+
+    rafId = requestAnimationFrame(() => {
+        setTransform(currentX, currentY);
+    });
+}
+
+function handleDragEnd() {
     isDragging = false;
     chatWindow.classList.remove('dragging');
+
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+
+    xOffset = currentX;
+    yOffset = currentY;
+}
+
+function setTransform(x, y) {
+    chatWindow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+}
+
+// Add event listeners for dragging
+chatWindow.addEventListener('mousedown', handleDragStart);
+document.addEventListener('mousemove', handleDrag, { passive: false });
+document.addEventListener('mouseup', handleDragEnd);
+
+// Prevent text selection during drag
+chatHeader.addEventListener('selectstart', (e) => {
+    if (isDragging) e.preventDefault();
+});
+
+// Handle window resize
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+    }
+
+    resizeTimeout = setTimeout(() => {
+        const winWidth = window.innerWidth;
+        const winHeight = window.innerHeight;
+        const rect = chatWindow.getBoundingClientRect();
+
+        if (rect.right > winWidth) {
+            currentX = winWidth - rect.width;
+            setTransform(currentX, currentY);
+            xOffset = currentX;
+        }
+        if (rect.bottom > winHeight) {
+            currentY = winHeight - rect.height;
+            setTransform(currentX, currentY);
+            yOffset = currentY;
+        }
+    }, 100);
 });
 
 // Close chat when clicking on blur overlay
