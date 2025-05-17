@@ -258,7 +258,7 @@ function handleUserClick(user) {
             openBusyUserModal(user);
             break;
         case 'offline':
-            // Do nothing for offline users
+            openOfflineUserModal(user);
             break;
     }
 }
@@ -276,11 +276,32 @@ function closeChatRequestModal() {
 function openBusyUserModal(user) {
     busyUserName.textContent = user.username;
     busyUserAvatar.src = user.avatar;
+    document.querySelector('#busyUserModal .request-user-info p').innerHTML = `
+        <span id="busyUserName">${user.username}</span> kullanıcısı başka bir kullanıcı ile zihinsel bağlantıda. Lütfen sonra tekrar deneyiniz.
+    `;
+    busyModal.style.display = 'block';
+}
+
+function openOfflineUserModal(user) {
+    busyUserName.textContent = user.username;
+    busyUserAvatar.src = user.avatar;
+    document.querySelector('#busyUserModal .request-user-info p').innerHTML = `
+        <span id="busyUserName">${user.username}</span> kullanıcısı şuan offline
+    `;
+    document.querySelector('#busyUserModal .request-user-avatar').classList.remove('busy');
+    document.querySelector('#busyUserModal .request-user-avatar').classList.add('offline');
     busyModal.style.display = 'block';
 }
 
 function closeBusyUserModal() {
     busyModal.style.display = 'none';
+    // Reset the avatar classes
+    document.querySelector('#busyUserModal .request-user-avatar').classList.remove('offline');
+    document.querySelector('#busyUserModal .request-user-avatar').classList.add('busy');
+    // Reset the error message back to default
+    document.querySelector('#busyUserModal .request-user-info p').innerHTML = `
+        <span id="busyUserName"></span> kullanıcısı başka bir kullanıcı ile zihinsel bağlantıda. Lütfen sonra tekrar deneyiniz.
+    `;
 }
 
 closeModal.addEventListener('click', closeChatRequestModal);

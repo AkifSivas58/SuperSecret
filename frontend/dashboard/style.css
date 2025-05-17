@@ -333,10 +333,18 @@ main {
 .request-user-info p {
     text-align: center;
     line-height: 1.6;
+    margin: 15px 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
 }
 
 .request-user-info p #requestUserName {
     color: var(--accent-cyber);
+    font-weight: 600;
+}
+
+.request-user-info p #busyUserName {
+    color: var(--danger);
     font-weight: 600;
 }
 
@@ -647,4 +655,38 @@ main {
 /* Offline kullanıcı adları biraz daha soluk görünsün */
 .user-avatar.offline + .user-name {
     opacity: 0.7;
+}
+
+.request-user-avatar.busy {
+    border-color: var(--danger);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.request-user-avatar.offline {
+    border-color: var(--gray);
+    box-shadow: 0 0 15px rgba(100, 116, 139, 0.4);
+}
+
+.request-user-avatar.busy img {
+    filter: brightness(0.8) saturate(1.2);
+}
+
+.request-user-avatar.offline img {
+    filter: grayscale(85%) brightness(0.8);
+}
+
+.request-user-info p {
+    text-align: center;
+    line-height: 1.6;
+    margin: 15px 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+#busyUserModal .request-user-avatar.busy + .request-user-info p #busyUserName {
+    color: var(--danger);
+}
+
+#busyUserModal .request-user-avatar.offline + .request-user-info p #busyUserName {
+    color: var(--gray);
 }
