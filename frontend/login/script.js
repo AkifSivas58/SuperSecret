@@ -294,3 +294,19 @@ if (registerForm) {
         }
     });
 }
+
+loginButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    
+    if (username && password) {
+        // Gerçek uygulamada burada API çağrısı yapılır
+        window.location.href = '/dashboard';
+    } else {
+        // Hata mesajını göster
+        errorMessage.style.display = 'block';
+        errorMessage.textContent = 'Lütfen kullanıcı adı ve şifre giriniz.';
+    }
+});

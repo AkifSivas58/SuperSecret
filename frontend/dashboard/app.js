@@ -349,7 +349,7 @@ acceptButton.addEventListener('click', () => {
 // Logout functionality
 logoutButton.addEventListener('click', () => {
     // In a real app, this would handle proper logout logic
-    window.location.href = '../login/index.html';
+    window.location.href = '/';
 });
 
 // Chat Window Functionality
