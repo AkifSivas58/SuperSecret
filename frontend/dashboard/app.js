@@ -162,14 +162,14 @@ animate();
 
 // Mock user data (in a real app, this would come from an API)
 const users = [
-    { id: 1, username: 'Neuro_Mind78', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
-    { id: 2, username: 'CyberThought', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
-    { id: 3, username: 'QuantumBrain', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'offline' },
-    { id: 4, username: 'SynapticLink', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
-    { id: 5, username: 'NeuralNexus', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
-    { id: 6, username: 'MindWaver', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'offline' },
-    { id: 7, username: 'ThoughtStream', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
-    { id: 8, username: 'CerebralSynth', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
+    { id: 1, username: 'Neuro_Mind78', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
+    { id: 2, username: 'CyberThought', avatar: '../../assets/Uzaylı_2.png', status: 'busy' },
+    { id: 3, username: 'QuantumBrain', avatar: '../../assets/Uzaylı_3.png', status: 'offline' },
+    { id: 4, username: 'SynapticLink', avatar: '../../assets/Uzaylı_4.png', status: 'busy' },
+    { id: 5, username: 'NeuralNexus', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
+    { id: 6, username: 'MindWaver', avatar: '../../assets/Uzaylı_2.png', status: 'offline' },
+    { id: 7, username: 'ThoughtStream', avatar: '../../assets/Uzaylı_3.png', status: 'idle' },
+    { id: 8, username: 'CerebralSynth', avatar: '../../assets/Uzaylı_4.png', status: 'busy' },
 ];
 
 // DOM elements
@@ -185,11 +185,28 @@ const logoutButton = document.getElementById('logout');
 // Set current user
 document.querySelector('.username').textContent = "Neuro_Mind78";
 
+// Sort users by status (idle, busy, offline)
+function sortUsersByStatus(users) {
+    // Status priority: 1. idle, 2. busy, 3. offline
+    const statusPriority = {
+        'idle': 1,
+        'busy': 2,
+        'offline': 3
+    };
+    
+    return [...users].sort((a, b) => {
+        return statusPriority[a.status] - statusPriority[b.status];
+    });
+}
+
 // Create user elements
 function createUserElements() {
     userGrid.innerHTML = '';
     
-    users.forEach(user => {
+    // Sort users by status before creating elements
+    const sortedUsers = sortUsersByStatus(users);
+    
+    sortedUsers.forEach(user => {
         // Skip current user
         if (user.username === "Neuro_Mind78") return;
         
@@ -197,11 +214,26 @@ function createUserElements() {
         userElement.className = 'user-bubble';
         userElement.dataset.userId = user.id;
         
+        // Translate status to Turkish
+        let statusText = '';
+        switch(user.status) {
+            case 'idle':
+                statusText = 'Aktif';
+                break;
+            case 'busy':
+                statusText = 'Meşgul';
+                break;
+            case 'offline':
+                statusText = 'Çevrimdışı';
+                break;
+        }
+        
         userElement.innerHTML = `
             <div class="user-avatar ${user.status}">
                 <img src="${user.avatar}" alt="${user.username}">
             </div>
             <div class="user-name">${user.username}</div>
+            <div class="user-status ${user.status}">${statusText}</div>
         `;
         
         userElement.addEventListener('click', () => handleUserClick(user));
@@ -294,8 +326,6 @@ const chatUserName = document.getElementById('chatUserName');
 const chatUserAvatar = document.getElementById('chatUserAvatar');
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
-const btnMinimize = document.querySelector('.btn-minimize');
-const btnMaximize = document.querySelector('.btn-maximize');
 const btnClose = document.querySelector('.btn-close');
 const btnSend = document.querySelector('.btn-send');
 const blurOverlay = document.getElementById('blurOverlay');
@@ -379,16 +409,6 @@ chatInput.addEventListener('keypress', (e) => {
 
 // Close chat window
 btnClose.addEventListener('click', closeChatWindow);
-
-// Minimize chat window
-btnMinimize.addEventListener('click', () => {
-    chatWindow.classList.add('minimized');
-});
-
-// Maximize chat window
-btnMaximize.addEventListener('click', () => {
-    chatWindow.classList.remove('minimized');
-});
 
 // Make the chat window draggable
 let isDragging = false;
