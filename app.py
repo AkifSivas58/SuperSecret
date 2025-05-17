@@ -1,104 +1,162 @@
 from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 from DataBase import DB
-app = Flask(__name__)
+from jose import jwt
+from functools import wraps
+from config import Config
 
-# load_dotenv()
-# Bunu .env dosyasından al!!!
-key = Fernet.generate_key() 
-fernet = Fernet(key)
+app = Flask(__name__)
+app.config.from_object(Config)
+
+fernet = Fernet(app.config['FERNET_KEY'])
+
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+
+
 db = DB()
 db.CreateDb()
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(" ")[1]
+        
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+        
+        try:
+            data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+            current_user = data['username']
+        except:
+            return jsonify({'message': 'Token is invalid'}), 401
+        
+        return f(current_user, *args, **kwargs)
+    return decorated
 
 @app.route("/register", methods=['POST'])
 def register():
     data = request.get_json()
-    db.InsertUser(data['username'], data["password"])
-    return jsonify({"message": "Successful register."})
-
-@app.route("/status", methods=["POST"])
-def update_status():
-    data = request.get_json()
-    db.SetUserStatus(data["username"], data["status"])
-    return jsonify({"message": f"Status updated to {data["status"]}."})
-
-@app.route("/start_chat", methods=["POST"])
-def start_chat():
-    data = request.get_json()
-    db.cursor.execute("INSERT INTO All_messages (MainUser, ConnectionUser) VALUES (?, ?)", (data['user1'], data['user2']))
-    chat_id = db.cursor.lastrowid
-    db.CreateChat(chat_id)
-    return jsonify({"chat_id": chat_id})
-
-@app.route("/send_message", methods=["POST"])
-def send_message():
-    data = request.get_json()
-    sender_id = data["sender_id"]
-    receiver_id = data["receiver_id"]
-    content = data["content"]
-
-    # Bağlantı kontrolü
-    conn_check = db.execute("""
-        SELECT * FROM connections
-        WHERE (
-            (requester_id = ? AND receiver_id = ?)
-            OR
-            (requester_id = ? AND receiver_id = ?)
-        )
-        AND status = 'accepted'
-    """, (sender_id, receiver_id, receiver_id, sender_id)).fetchone()
-
-    if not conn_check:
-        return jsonify({"error": "Bağlantı kabul edilmediği için mesaj gönderilemez."}), 403
-
-    db.execute("INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)", (sender_id, receiver_id, content))
-    db.commit()
-    return jsonify({"message": "Mesaj gönderildi."}), 200
-
-@app.route("/get_messages/<int:chat_id>", methods=["GET"])
-def get_messages(chat_id):
-    messages = db.GetMessages(chat_id)
-    result = []
-    for time, sender, message in messages:
-        result.append({
-            "time": time,
-            "sender": sender,
-            "message": fernet.decrypt(message.encode()).decode()
-        })
+    if not data or 'username' not in data or 'password' not in data:
+        return jsonify({"error": "Missing required fields"}), 400
     
-    return jsonify(result)
+    try:
+        db.InsertUser(data['username'], data['password'])
+        token = jwt.encode(
+            {'username': data['username']},
+            app.config['JWT_SECRET_KEY'],
+            algorithm="HS256"
+        )
+        return jsonify({"token": token, "message": "Registration successful"})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Username already exists"}), 409
 
-@app.route('/delete_chat/<int:chat_id>', methods=['DELETE'])
-def delete_chat(chat_id):
-    db.DeleteChat(chat_id)
-    return jsonify({"message": f"Chat {chat_id} deleted."})
-
-app.route("/connect", methods=["POST"])
-def connect():
+@app.route("/login", methods=['POST'])
+def login():
     data = request.get_json()
-    requester_id = data["requester_id"]
-    receiver_id = data["receiver_id"]
+    if not data or 'username' not in data or 'password' not in data:
+        return jsonify({"error": "Missing credentials"}), 400
+    
+    try:
+        user = db.GetUser(data['username'])
+        if not user:
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        if not db.CheckPassword(data['password'], user['password']):
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        token = jwt.encode(
+            {
+                'username': data['username'],
+                'exp': datetime.utcnow() + timedelta(seconds=app.config['JWT_ACCESS_TOKEN_EXPIRES'])
+            },
+            app.config['JWT_SECRET_KEY'],
+            algorithm="HS256"
+        )
+        
+        return jsonify({
+            "token": token,
+            "username": data['username'],
+            "message": "Login successful"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    # Aynı istek var mı kontrol et
-    exists = db.execute("SELECT * FROM connections WHERE requester_id=? AND receiver_id=?", (requester_id, receiver_id)).fetchone()
-    if exists:
-        return jsonify({"message": "İstek zaten gönderildi."}), 400
+@socketio.on('connect')
+def handle_connect():
+    token = request.args.get('token')
+    try:
+        jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+    except:
+        return False
 
-    db.execute("INSERT INTO connections (requester_id, receiver_id, status) VALUES (?, ?, ?)", (requester_id, receiver_id, "pending"))
-    db.commit()
-    return jsonify({"message": "İstek gönderildi."}), 200
+@socketio.on('join_chat')
+def handle_join_chat(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        other_user = data['other_user']
+        
+        # Create new chat
+        chat_id = db.GetChatID(username, other_user)
+        if not chat_id:
+            db.cursor.execute("INSERT INTO All_messages (MainUser, ConnectionUser) VALUES (?, ?)", 
+                            (username, other_user))
+            chat_id = db.cursor.lastrowid
+            db.CreateChat(chat_id)
+        
+        join_room(str(chat_id))
+        emit('chat_started', {'chat_id': chat_id, 'other_user': other_user})
+    except Exception as e:
+        emit('error', {'message': str(e)})
 
-@app.route("/accept", methods=["POST"])
-def accept():
-    data = request.get_json()
-    requester_id = data["requester_id"]
-    receiver_id = data["receiver_id"]
+@socketio.on('send_message')
+def handle_message(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        chat_id = data['chat_id']
+        message = data['message']
+        
+        # Encrypt message
+        encrypted_msg = fernet.encrypt(message.encode())
+        
+        # Store message
+        db.AddMessage(chat_id, username, encrypted_msg)
+        
+        # Broadcast to room
+        emit('new_message', {
+            'chat_id': chat_id,
+            'sender': username,
+            'message': message,
+            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }, room=str(chat_id))
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
 
-    db.execute("UPDATE connections SET status='accepted' WHERE requester_id=? AND receiver_id=?", (requester_id, receiver_id))
-    db.commit()
-    return jsonify({"message": "Bağlantı kabul edildi."}), 200
+@socketio.on('leave_chat')
+def handle_leave_chat(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        chat_id = data['chat_id']
+        
+        leave_room(str(chat_id))
+        db.DeleteChat(int(chat_id))
+        
+        emit('chat_ended', {'chat_id': chat_id}, room=str(chat_id))
+    except Exception as e:
+        emit('error', {'message': str(e)})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)

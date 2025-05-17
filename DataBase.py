@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime
+import bcrypt  # Add this import for password hashing
 
 class DB:
     def __init__(self):
@@ -11,7 +12,6 @@ class DB:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS Users (
                 UserName TEXT PRIMARY KEY,
-                Email TEXT UNIQUE,
                 Password TEXT,
                 Status TEXT
             )
@@ -50,8 +50,10 @@ class DB:
         """
         self.cursor.execute(query)
 
-    def InsertUser(self, username, email, password, status='offline'):
-        self.cursor.execute("INSERT INTO Users VALUES (?, ?, ?, ?)", (username, email, password, status))
+    def InsertUser(self, username, password, status='offline'):
+        # Hash the password before storing
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        self.cursor.execute("INSERT INTO Users VALUES (?, ?, ?)", (username, hashed_password, status))
         self.conn.commit()
 
     def SetUserStatus(self, username, status):
@@ -76,3 +78,17 @@ class DB:
         self.cursor.execute("SELECT ChatID FROM All_messages WHERE MainUser=? AND ConnectionUser=?", (user1, user2))
         res = self.cursor.fetchone()
         return res[0] if res else None
+
+    def GetUser(self, username):
+        self.cursor.execute("SELECT * FROM Users WHERE UserName=?", (username,))
+        user = self.cursor.fetchone()
+        if user:
+            return {
+                'username': user[0],
+                'password': user[1],
+                'status': user[2]
+            }
+        return None
+
+    def CheckPassword(self, provided_password, stored_password):
+        return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password)
