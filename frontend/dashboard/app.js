@@ -91,7 +91,7 @@ class Particle {
 }
 
 let particlesArray = [];
-const numberOfParticles = 200;
+const numberOfParticles = 150;
 
 // Initialize particles
 function init() {
@@ -198,9 +198,8 @@ function createUserElements() {
         userElement.dataset.userId = user.id;
         
         userElement.innerHTML = `
-            <div class="user-avatar">
+            <div class="user-avatar ${user.status === 'online' ? 'online' : 'offline'}">
                 <img src="${user.avatar}" alt="${user.username}">
-                <div class="status-indicator ${user.status === 'offline' ? 'status-offline' : ''}"></div>
             </div>
             <div class="user-name">${user.username}</div>
         `;
@@ -208,59 +207,9 @@ function createUserElements() {
         userElement.addEventListener('click', () => openChatRequestModal(user));
         userGrid.appendChild(userElement);
     });
-    
-    // After all users are added, create connection lines
-    createConnectionLines();
 }
 
-// Create network-like connection lines between user elements
-function createConnectionLines() {
-    // Remove existing connection lines
-    document.querySelectorAll('.connection-line').forEach(line => line.remove());
-    
-    const userBubbles = document.querySelectorAll('.user-bubble');
-    
-    // Create connections between users
-    for (let i = 0; i < userBubbles.length; i++) {
-        for (let j = i + 1; j < userBubbles.length; j++) {
-            // Only connect some users (not all-to-all) for a more natural look
-            if (Math.random() > 0.6) continue;
-            
-            const user1 = userBubbles[i];
-            const user2 = userBubbles[j];
-            
-            const rect1 = user1.getBoundingClientRect();
-            const rect2 = user2.getBoundingClientRect();
-            
-            const x1 = rect1.left + rect1.width / 2;
-            const y1 = rect1.top + rect1.height / 2;
-            const x2 = rect2.left + rect2.width / 2;
-            const y2 = rect2.top + rect2.height / 2;
-            
-            // Calculate distance and angle
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            
-            // Create line element
-            const line = document.createElement('div');
-            line.className = 'connection-line';
-            line.style.width = `${distance}px`;
-            line.style.left = `${x1}px`;
-            line.style.top = `${y1}px`;
-            line.style.transform = `rotate(${angle}deg)`;
-            
-            document.body.appendChild(line);
-        }
-    }
-}
-
-// Update connection lines on window resize
-window.addEventListener('resize', () => {
-    // Delay to ensure DOM has updated
-    setTimeout(createConnectionLines, 200);
-});
+// Modal functionality
 
 // Modal functionality
 function openChatRequestModal(user) {
