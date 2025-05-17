@@ -333,7 +333,7 @@ if (registerForm) {
             const data = await response.json();
 
             if (response.ok) {
-                // Store the token in localStorage
+                // Store both token and username in localStorage
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('username', data.username);
                 // Redirect to dashboard

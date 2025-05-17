@@ -54,13 +54,22 @@ def register():
         return jsonify({"error": "Missing required fields"}), 400
     
     try:
-        db.InsertUser(data['username'], data['password'])
+        # Register user with 'Idle' status
+        db.InsertUser(data['username'], data['password'], status='idle')
+        
         token = jwt.encode(
-            {'username': data['username']},
+            {
+                'username': data['username'],
+                'exp': datetime.utcnow() + timedelta(seconds=app.config['JWT_ACCESS_TOKEN_EXPIRES'])
+            },
             app.config['JWT_SECRET_KEY'],
             algorithm="HS256"
         )
-        return jsonify({"token": token, "message": "Registration successful"})
+        return jsonify({
+            "token": token,
+            "username": data['username'],
+            "message": "Registration successful"
+        })
     except sqlite3.IntegrityError:
         return jsonify({"error": "Username already exists"}), 409
 
@@ -106,6 +115,17 @@ def logout(current_user):
         # Update user status to Offline
         db.SetUserStatus(current_user, 'offline')
         return jsonify({"message": "Logout successful"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/users", methods=['GET'])
+@token_required
+def get_users(current_user):
+    try:
+        users = db.GetAllUsers()
+        # Filter out current user from the list
+        users = [user for user in users if user['username'] != current_user]
+        return jsonify({"users": users})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
