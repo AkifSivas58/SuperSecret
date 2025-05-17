@@ -413,7 +413,8 @@ chatInput.addEventListener('keypress', (e) => {
 });
 
 // Close chat window button
-btnClose.addEventListener('click', () => {
+btnClose.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent event from bubbling to header
     closeChatWindow();
 });
 
@@ -428,6 +429,10 @@ let yOffset = 0;
 let rafId = null;
 
 function handleDragStart(e) {
+    // Don't start drag if clicking on control buttons
+    if (e.target.closest('.chat-controls')) return;
+    
+    // Only allow dragging from the header area (excluding controls)
     if (!e.target.closest('.chat-header')) return;
     
     isDragging = true;

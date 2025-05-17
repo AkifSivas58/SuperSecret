@@ -471,13 +471,14 @@ main {
 
 .chat-controls {
     display: flex;
+    pointer-events: auto !important;
 }
 
 .chat-controls button {
     background: transparent;
     border: none;
-    color: var(--danger);
-    cursor: pointer;
+    color: var(--text-primary);
+    cursor: pointer !important;
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -485,20 +486,21 @@ main {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    pointer-events: auto !important;
 }
 
 .chat-controls button:hover {
-    background-color: rgba(239, 68, 68, 0.15);
-    transform: scale(1.1);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent-cyber);
 }
 
 .btn-close {
-    margin-left: auto;
-    font-size: 1.1rem;
+    color: var(--danger) !important;
 }
 
 .btn-close:hover {
-    color: var(--danger);
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: var(--danger) !important;
 }
 
 .chat-body {
