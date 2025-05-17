@@ -351,46 +351,6 @@ main {
     filter: drop-shadow(0 0 5px rgba(0, 255, 195, 0.5));
 }
 
-/* Responsive Styles */
-@media (max-width: 768px) {
-    header {
-        padding: 15px 20px;
-    }
-    
-    .header-logo img {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .header-logo h1 {
-        font-size: 1.2rem;
-    }
-    
-    main {
-        padding: 20px;
-    }
-    
-    .user-grid {
-        gap: 40px;
-        margin: 30px auto;
-    }
-    
-    .user-bubble {
-        width: 110px;
-        height: 150px;
-    }
-    
-    .user-avatar {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .modal-content {
-        width: 90%;
-        margin: 30% auto;
-    }
-}
-
 /* Chat Window Styles */
 .chat-window {
     display: none;
@@ -402,17 +362,29 @@ main {
     height: 550px;
     background-color: var(--panel-bg);
     border-radius: 15px;
-    box-shadow: 0 0 30px rgba(0, 255, 195, 0.3);
+    box-shadow: 0 0 40px rgba(0, 255, 195, 0.4);
     z-index: 150;
     overflow: hidden;
     resize: both;
     min-width: 350px;
     min-height: 450px;
-    max-width: 800px;
-    max-height: 800px;
+    max-width: 90vw;
+    max-height: 90vh;
     backdrop-filter: blur(15px);
     border: 2px solid var(--accent-cyber);
     transition: all 0.3s ease;
+}
+
+.blur-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 140;
 }
 
 .chat-window.minimized {

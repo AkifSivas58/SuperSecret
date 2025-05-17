@@ -298,24 +298,43 @@ const btnMinimize = document.querySelector('.btn-minimize');
 const btnMaximize = document.querySelector('.btn-maximize');
 const btnClose = document.querySelector('.btn-close');
 const btnSend = document.querySelector('.btn-send');
+const blurOverlay = document.getElementById('blurOverlay');
 
 // Open chat window
 function openChatWindow(userName, userAvatar) {
     chatUserName.textContent = userName;
     chatUserAvatar.src = userAvatar;
     chatWindow.style.display = 'block';
+    blurOverlay.style.display = 'block'; // Show blur overlay
     
     // Add a welcome message
     addMessage(`Merhaba! ${userName} ile zihinsel bağlantı kuruldu.`, 'received');
     
     // Focus on the input
     chatInput.focus();
+    
+    // Center the window initially
+    centerChatWindow();
+}
+
+// Center chat window in the screen
+function centerChatWindow() {
+    // Reset any inline positioning
+    chatWindow.style.left = '50%';
+    chatWindow.style.top = '50%';
+    chatWindow.style.transform = 'translate(-50%, -50%)';
 }
 
 // Close chat window
 function closeChatWindow() {
     chatWindow.style.display = 'none';
+    blurOverlay.style.display = 'none'; // Hide blur overlay
     chatMessages.innerHTML = ''; // Clear chat history
+    
+    // Reset window to center position and default size for next time
+    centerChatWindow();
+    chatWindow.style.width = '400px';
+    chatWindow.style.height = '550px';
 }
 
 // Add message to chat
@@ -385,6 +404,9 @@ chatHeader.addEventListener('mousedown', (e) => {
     // Calculate the offset of the mouse cursor from the top-left corner of the element
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
+    
+    // Prevent default browser drag behavior
+    e.preventDefault();
 });
 
 document.addEventListener('mousemove', (e) => {
@@ -394,15 +416,37 @@ document.addEventListener('mousemove', (e) => {
     const x = e.clientX - offsetX;
     const y = e.clientY - offsetY;
     
-    // Apply the new position with translate instead of top/left for better performance
-    chatWindow.style.transform = `translate(0, 0)`;
+    // Apply the new position
+    chatWindow.style.transform = 'none'; // Remove translate transform
     chatWindow.style.left = `${x}px`;
     chatWindow.style.top = `${y}px`;
+    
+    // Keep window within viewport
+    const rect = chatWindow.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+        chatWindow.style.left = `${window.innerWidth - rect.width}px`;
+    }
+    if (rect.bottom > window.innerHeight) {
+        chatWindow.style.top = `${window.innerHeight - rect.height}px`;
+    }
+    if (rect.left < 0) {
+        chatWindow.style.left = '0px';
+    }
+    if (rect.top < 0) {
+        chatWindow.style.top = '0px';
+    }
 });
 
 document.addEventListener('mouseup', () => {
     isDragging = false;
     chatWindow.classList.remove('dragging');
+});
+
+// Close chat when clicking on blur overlay
+blurOverlay.addEventListener('click', (e) => {
+    if (e.target === blurOverlay) {
+        closeChatWindow();
+    }
 });
 
 // Initialize
