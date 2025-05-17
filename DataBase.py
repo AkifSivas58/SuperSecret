@@ -2,52 +2,53 @@ import sqlite3
 from datetime import datetime
 
 class DB:
-    
     def __init__(self):
-        self.conn = sqlite3.connect("NeuralNetworks")
+        self.conn = sqlite3.connect("NeuralNetworks.db", check_same_thread=False)
         self.cursor = self.conn.cursor()
+        self.CreateDb()
 
     def CreateDb(self):
         self.cursor.execute("""
-            CREATE TABLE IF NOT EXIST Users (
-            UserName TEXT PRIMARY KEY,
-            Email TEXT UNIQUE,
-            Password TEXT,
-            Status TEXT                
-        )
-        """) 
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXIST Connections(
-            MainUser TEXT,
-            ConnectionUser TEXT,
-            PRIMARY KEY (MainUser,ConnectionUser),
-            FOREIGN KEY (MainUser) REFERENCES Users(UserName),
-            FOREIGN KEY (ConnectionUser) REFERENCES Users(UserName)
-        )
-        """)
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXIST All_messages(
-            MainUser TEXT,
-            ConnectionUser TEXT,
-            ChatID INTEGER AUTOINCREMENT,
-            PRIMARY KEY (MainUser,ConnectionUser),
-            FOREIGN KEY (MainUser) REFERENCES Users(UserName),
-            FOREIGN KEY (ConnectionUser) REFERENCES Users(UserName)
-                            
-        )
+            CREATE TABLE IF NOT EXISTS Users (
+                UserName TEXT PRIMARY KEY,
+                Email TEXT UNIQUE,
+                Password TEXT,
+                Status TEXT
+            )
         """)
 
-    def CreateChat(self,ChatID):
-        QUERY = """
-        CREATE TABLE IF NOT EXIST """ + ChatID +"""(
-        Time DATETIME PRIMARY KEY,
-        Sender TEXT,
-        EncodedMessage TEXT,
-        FOREIGN KEY (Sender) REFERENCES Users(UserName)
-        )
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Connections (
+                MainUser TEXT,
+                ConnectionUser TEXT,
+                PRIMARY KEY (MainUser, ConnectionUser),
+                FOREIGN KEY (MainUser) REFERENCES Users(UserName),
+                FOREIGN KEY (ConnectionUser) REFERENCES Users(UserName)
+            )
+        """)
 
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS All_messages (
+                MainUser TEXT,
+                ConnectionUser TEXT,
+                ChatID INTEGER PRIMARY KEY AUTOINCREMENT,
+                FOREIGN KEY (MainUser) REFERENCES Users(UserName),
+                FOREIGN KEY (ConnectionUser) REFERENCES Users(UserName)
+            )
+        """)
+
+        self.conn.commit()
+
+    def CreateChat(self, chat_id):
+        query = f"""
+        CREATE TABLE IF NOT EXISTS Chat_{chat_id} (
+            Time DATETIME PRIMARY KEY,
+            Sender TEXT,
+            EncodedMessage TEXT,
+            FOREIGN KEY (Sender) REFERENCES Users(UserName)
+        )
         """
-        self.cursor.execute(QUERY)
+        self.cursor.execute(query)
 
     def InsertUser(self, username, email, password, status='offline'):
         self.cursor.execute("INSERT INTO Users VALUES (?, ?, ?, ?)", (username, email, password, status))

@@ -10,6 +10,7 @@ app = Flask(__name__)
 key = Fernet.generate_key() 
 fernet = Fernet(key)
 db = DB()
+db.CreateDb()
 
 @app.route("/register", methods=['POST'])
 def register():
