@@ -271,6 +271,8 @@ function openChatRequestModal(user) {
 
 function closeChatRequestModal() {
     modal.style.display = 'none';
+    // Hide loading container when modal is closed
+    document.querySelector('.loading-container').style.display = 'none';
 }
 
 function openBusyUserModal(user) {
@@ -323,15 +325,25 @@ closeBusyButton.addEventListener('click', closeBusyUserModal);
 
 // Accept chat request
 acceptButton.addEventListener('click', () => {
-    // Close the modal and open chat window
-    closeChatRequestModal();
+    // Show loading animation
+    const loadingContainer = document.querySelector('.loading-container');
+    loadingContainer.style.display = 'flex';
     
-    // Get user info from modal
-    const userName = requestUserName.textContent;
-    const userAvatar = requestUserAvatar.src;
-    
-    // Open chat window
-    openChatWindow(userName, userAvatar);
+    // Simulate request delay (3 seconds)
+    setTimeout(() => {
+        // Hide loading animation
+        loadingContainer.style.display = 'none';
+        
+        // Close the modal and open chat window
+        closeChatRequestModal();
+        
+        // Get user info from modal
+        const userName = requestUserName.textContent;
+        const userAvatar = requestUserAvatar.src;
+        
+        // Open chat window
+        openChatWindow(userName, userAvatar);
+    }, 3000);
 });
 
 // Logout functionality
