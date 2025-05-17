@@ -160,18 +160,6 @@ function animate() {
 init();
 animate();
 
-// Mock user data (in a real app, this would come from an API)
-const users = [
-    { id: 1, username: 'Erdem ÇANKAYA', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
-    { id: 2, username: 'CyberThought', avatar: '../../assets/Uzaylı_2.png', status: 'busy' },
-    { id: 3, username: 'QuantumBrain', avatar: '../../assets/Uzaylı_3.png', status: 'offline' },
-    { id: 4, username: 'SynapticLink', avatar: '../../assets/Uzaylı_4.png', status: 'busy' },
-    { id: 5, username: 'NeuralNexus', avatar: '../../assets/Uzaylı_1.png', status: 'idle' },
-    { id: 6, username: 'MindWaver', avatar: '../../assets/Uzaylı_2.png', status: 'offline' },
-    { id: 7, username: 'ThoughtStream', avatar: '../../assets/Uzaylı_3.png', status: 'idle' },
-    { id: 8, username: 'CerebralSynth', avatar: '../../assets/Uzaylı_4.png', status: 'busy' },
-];
-
 // DOM elements
 const userGrid = document.querySelector('.user-grid');
 const modal = document.getElementById('chatRequestModal');
@@ -182,8 +170,40 @@ const requestUserName = document.getElementById('requestUserName');
 const requestUserAvatar = document.getElementById('requestUserAvatar');
 const logoutButton = document.getElementById('logout');
 
-// Set current user
-document.querySelector('.username').textContent = "Neuro_Mind78";
+// Set current user from localStorage
+const currentUsername = localStorage.getItem('username');
+if (!currentUsername) {
+    // If no username in localStorage, redirect to login
+    window.location.href = '../login/index.html';
+} else {
+    document.querySelector('.username').textContent = currentUsername;
+}
+
+// Fetch users from backend
+async function fetchUsers() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/users', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            createUserElements(data.users);
+        } else {
+            console.error('Failed to fetch users');
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+    }
+}
 
 // Sort users by status (idle, busy, offline)
 function sortUsersByStatus(users) {
@@ -200,19 +220,15 @@ function sortUsersByStatus(users) {
 }
 
 // Create user elements
-function createUserElements() {
+function createUserElements(users) {
     userGrid.innerHTML = '';
     
     // Sort users by status before creating elements
     const sortedUsers = sortUsersByStatus(users);
     
     sortedUsers.forEach(user => {
-        // Skip current user
-        if (user.username === "Neuro_Mind78") return;
-        
         const userElement = document.createElement('div');
         userElement.className = 'user-bubble';
-        userElement.dataset.userId = user.id;
         
         // Translate status to Turkish
         let statusText = '';
@@ -347,9 +363,34 @@ acceptButton.addEventListener('click', () => {
 });
 
 // Logout functionality
-logoutButton.addEventListener('click', () => {
-    // In a real app, this would handle proper logout logic
-    window.location.href = '/';
+logoutButton.addEventListener('click', async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            // Redirect to login page
+            window.location.href = '../login/index.html';
+        } else {
+            console.error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
 });
 
 // Chat Window Functionality
@@ -568,5 +609,7 @@ blurOverlay.addEventListener('click', (e) => {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    createUserElements();
+    fetchUsers();
+    // Refresh user list every 30 seconds
+    setInterval(fetchUsers, 30000);
 });

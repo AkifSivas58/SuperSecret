@@ -210,14 +210,39 @@ const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
 
 if (loginForm) {
-    loginForm.addEventListener('submit', (event) => {
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
         const usernameInput = document.getElementById('login-username');
         const passwordInput = document.getElementById('login-password');
         const username = usernameInput.value;
         const password = passwordInput.value;
 
-        if (!validatePassword(username, password)) {
-            event.preventDefault(); // Prevent form submission
+        try {
+            const response = await fetch('http://localhost:5000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store the token in localStorage
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username);
+                // Redirect to dashboard
+                window.location.href = '../dashboard/index.html';
+            } else {
+                alert(data.error || 'Giriş başarısız');
+            }
+        } catch (error) {
+            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+            console.error('Login error:', error);
         }
     });
 }
@@ -275,7 +300,8 @@ if (registerPasswordInput && passwordStrengthBar) {
 }
 
 if (registerForm) {
-    registerForm.addEventListener('submit', (event) => {
+    registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
         const usernameInput = document.getElementById('register-username');
         const passwordInput = document.getElementById('register-password');
         const password2Input = document.getElementById('register-password2');
@@ -284,13 +310,40 @@ if (registerForm) {
         const password2 = password2Input.value;
 
         if (password !== password2) {
-            alert("Şifreler eşleşmiyor.");
-            event.preventDefault();
+            alert('Şifreler eşleşmiyor!');
             return;
         }
 
         if (!validatePassword(username, password)) {
-            event.preventDefault(); // Prevent form submission
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:5000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store both token and username in localStorage
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username);
+                // Redirect to dashboard
+                window.location.href = '../dashboard/index.html';
+            } else {
+                alert(data.error || 'Kayıt başarısız');
+            }
+        } catch (error) {
+            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+            console.error('Register error:', error);
         }
     });
 }

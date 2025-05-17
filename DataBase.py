@@ -90,5 +90,15 @@ class DB:
             }
         return None
 
+    def GetAllUsers(self):
+        self.cursor.execute("SELECT UserName, Status FROM Users")
+        users = self.cursor.fetchall()
+        return [{
+            'username': user[0],
+            'status': user[1],
+            'avatar': f'../../assets/Uzaylı_{(hash(user[0]) % 4) + 1}.png'  # Generate avatar based on username
+        } for user in users]
+
     def CheckPassword(self, provided_password, stored_password):
         return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password)
+
