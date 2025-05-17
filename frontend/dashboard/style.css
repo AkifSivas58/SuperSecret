@@ -388,19 +388,7 @@ main {
     box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
 }
 
-/* For drawing connection lines between users */
-.connection-line {
-    position: absolute;
-    height: 2px;
-    background: linear-gradient(90deg, 
-        rgba(0, 255, 195, 0.1), 
-        rgba(0, 255, 195, 0.6), 
-        rgba(0, 255, 195, 0.1));
-    transform-origin: left center;
-    z-index: 1;
-    opacity: 0.6;
-    filter: drop-shadow(0 0 5px rgba(0, 255, 195, 0.5));
-}
+
 
 /* Chat Window Styles */
 .chat-window {
@@ -408,7 +396,7 @@ main {
     position: fixed;
     top: 0;
     left: 0;
-    width: 400px;
+    width: 900px;
     height: 550px;
     background-color: var(--panel-bg);
     border-radius: 15px;

@@ -367,6 +367,8 @@ const blurOverlay = document.getElementById('blurOverlay');
 function openChatWindow(userName, userAvatar) {
     chatUserName.textContent = userName;
     chatUserAvatar.src = userAvatar;
+    chatWindow.style.width = '900px'; // Set initial width
+    chatWindow.style.height = '550px'; // Set initial height
     chatWindow.style.display = 'block';
     blurOverlay.style.display = 'block'; // Show blur overlay
     
@@ -383,11 +385,13 @@ function openChatWindow(userName, userAvatar) {
 // Center chat window in the screen
 function centerChatWindow() {
     const rect = chatWindow.getBoundingClientRect();
-    currentX = (window.innerWidth - rect.width) / 2;
-    currentY = (window.innerHeight - rect.height) / 2;
+    currentX = (window.innerWidth - 900) / 2; // Updated width
+    currentY = (window.innerHeight - 550) / 2;
     chatWindow.style.transform = 'none';
     chatWindow.style.top = '0';
     chatWindow.style.left = '0';
+    chatWindow.style.width = '900px'; // Set default width
+    chatWindow.style.height = '550px'; // Set default height
     setTransform(currentX, currentY);
     xOffset = currentX;
     yOffset = currentY;
@@ -399,10 +403,8 @@ function closeChatWindow() {
     blurOverlay.style.display = 'none'; // Hide blur overlay
     chatMessages.innerHTML = ''; // Clear chat history
     
-    // Reset window position for next time
+    // Reset window position and size for next time
     centerChatWindow();
-    chatWindow.style.width = '400px';
-    chatWindow.style.height = '550px';
 }
 
 // Add message to chat
