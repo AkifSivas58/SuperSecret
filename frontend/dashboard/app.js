@@ -270,15 +270,139 @@ closeBusyButton.addEventListener('click', closeBusyUserModal);
 
 // Accept chat request
 acceptButton.addEventListener('click', () => {
-    // In a real app, this would initiate a WebSocket connection or similar
-    alert('Zihinsel bağlantı kuruldu! Bu özellik şu anda geliştirme aşamasındadır.');
+    // Close the modal and open chat window
     closeChatRequestModal();
+    
+    // Get user info from modal
+    const userName = requestUserName.textContent;
+    const userAvatar = requestUserAvatar.src;
+    
+    // Open chat window
+    openChatWindow(userName, userAvatar);
 });
 
 // Logout functionality
 logoutButton.addEventListener('click', () => {
     // In a real app, this would handle proper logout logic
     window.location.href = '../login/index.html';
+});
+
+// Chat Window Functionality
+const chatWindow = document.getElementById('chatWindow');
+const chatHeader = document.getElementById('chatHeader');
+const chatUserName = document.getElementById('chatUserName');
+const chatUserAvatar = document.getElementById('chatUserAvatar');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const btnMinimize = document.querySelector('.btn-minimize');
+const btnMaximize = document.querySelector('.btn-maximize');
+const btnClose = document.querySelector('.btn-close');
+const btnSend = document.querySelector('.btn-send');
+
+// Open chat window
+function openChatWindow(userName, userAvatar) {
+    chatUserName.textContent = userName;
+    chatUserAvatar.src = userAvatar;
+    chatWindow.style.display = 'block';
+    
+    // Add a welcome message
+    addMessage(`Merhaba! ${userName} ile zihinsel bağlantı kuruldu.`, 'received');
+    
+    // Focus on the input
+    chatInput.focus();
+}
+
+// Close chat window
+function closeChatWindow() {
+    chatWindow.style.display = 'none';
+    chatMessages.innerHTML = ''; // Clear chat history
+}
+
+// Add message to chat
+function addMessage(text, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message message-${type}`;
+    messageDiv.textContent = text;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to the bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Send message
+function sendMessage() {
+    const text = chatInput.value.trim();
+    if (text === '') return;
+    
+    // Add user message
+    addMessage(text, 'sent');
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // In a real app, this would send the message via WebSocket or similar
+    // Simulate a response after a short delay
+    setTimeout(() => {
+        addMessage('Bu özellik şu anda geliştirme aşamasındadır.', 'received');
+    }, 1000);
+}
+
+// Send message on button click
+btnSend.addEventListener('click', sendMessage);
+
+// Send message on Enter key press
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Close chat window
+btnClose.addEventListener('click', closeChatWindow);
+
+// Minimize chat window
+btnMinimize.addEventListener('click', () => {
+    chatWindow.classList.add('minimized');
+});
+
+// Maximize chat window
+btnMaximize.addEventListener('click', () => {
+    chatWindow.classList.remove('minimized');
+});
+
+// Make the chat window draggable
+let isDragging = false;
+let offsetX, offsetY;
+
+chatHeader.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    chatWindow.classList.add('dragging');
+    
+    // Get the current position of the element
+    const rect = chatWindow.getBoundingClientRect();
+    
+    // Calculate the offset of the mouse cursor from the top-left corner of the element
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    // Calculate the new position
+    const x = e.clientX - offsetX;
+    const y = e.clientY - offsetY;
+    
+    // Apply the new position with translate instead of top/left for better performance
+    chatWindow.style.transform = `translate(0, 0)`;
+    chatWindow.style.left = `${x}px`;
+    chatWindow.style.top = `${y}px`;
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    chatWindow.classList.remove('dragging');
 });
 
 // Initialize
