@@ -15,8 +15,6 @@ fernet = Fernet(app.config['FERNET_KEY'])
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-
-
 db = DB()
 db.CreateDb()
 
@@ -31,10 +29,18 @@ def token_required(f):
             return jsonify({'message': 'Token is missing'}), 401
         
         try:
-            data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+            # Decode and verify token, including expiration
+            data = jwt.decode(
+                token, 
+                app.config['JWT_SECRET_KEY'], 
+                algorithms=["HS256"],
+                options={"verify_exp": True}  # Ensure expiration is verified
+            )
             current_user = data['username']
-        except:
-            return jsonify({'message': 'Token is invalid'}), 401
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired. Please log in again.'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token. Please log in again.'}), 401
         
         return f(current_user, *args, **kwargs)
     return decorated
