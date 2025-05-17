@@ -57,6 +57,29 @@
             </div>
         </div>
     </div>
+    
+    <!-- Busy User Error Modal -->
+    <div class="modal" id="busyUserModal">
+        <div class="modal-content">
+            <span class="close-modal close-busy-modal">&times;</span>
+            <div class="modal-header">
+                <h2>Bağlantı Hatası</h2>
+            </div>
+            <div class="modal-body">
+                <div class="request-user-info">
+                    <div class="request-user-avatar busy">
+                        <img id="busyUserAvatar" src="" alt="Busy User Avatar">
+                    </div>
+                    <p>
+                        <span id="busyUserName"></span> kullanıcısı meşgul. Lütfen sonra tekrar deneyiniz.
+                    </p>
+                </div>
+                <div class="request-actions">
+                    <button class="btn-request-cancel close-busy-button">Tamam</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -162,14 +162,14 @@ animate();
 
 // Mock user data (in a real app, this would come from an API)
 const users = [
-    { id: 1, username: 'Neuro_Mind78', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'online' },
-    { id: 2, username: 'CyberThought', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'online' },
+    { id: 1, username: 'Neuro_Mind78', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
+    { id: 2, username: 'CyberThought', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
     { id: 3, username: 'QuantumBrain', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'offline' },
-    { id: 4, username: 'SynapticLink', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'online' },
-    { id: 5, username: 'NeuralNexus', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'online' },
+    { id: 4, username: 'SynapticLink', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
+    { id: 5, username: 'NeuralNexus', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
     { id: 6, username: 'MindWaver', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'offline' },
-    { id: 7, username: 'ThoughtStream', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'online' },
-    { id: 8, username: 'CerebralSynth', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'online' },
+    { id: 7, username: 'ThoughtStream', avatar: '../../assets/Gemini_Generated_Image_v00jscv00jscv00j.png', status: 'idle' },
+    { id: 8, username: 'CerebralSynth', avatar: '../../assets/ChatGPT Image May 17, 2025, 03_10_49 PM.png', status: 'busy' },
 ];
 
 // DOM elements
@@ -198,20 +198,39 @@ function createUserElements() {
         userElement.dataset.userId = user.id;
         
         userElement.innerHTML = `
-            <div class="user-avatar ${user.status === 'online' ? 'online' : 'offline'}">
+            <div class="user-avatar ${user.status}">
                 <img src="${user.avatar}" alt="${user.username}">
             </div>
             <div class="user-name">${user.username}</div>
         `;
         
-        userElement.addEventListener('click', () => openChatRequestModal(user));
+        userElement.addEventListener('click', () => handleUserClick(user));
         userGrid.appendChild(userElement);
     });
 }
 
 // Modal functionality
+const busyModal = document.getElementById('busyUserModal');
+const busyUserName = document.getElementById('busyUserName');
+const busyUserAvatar = document.getElementById('busyUserAvatar');
+const closeBusyModal = document.querySelector('.close-busy-modal');
+const closeBusyButton = document.querySelector('.close-busy-button');
 
-// Modal functionality
+// Handle user click based on status
+function handleUserClick(user) {
+    switch(user.status) {
+        case 'idle':
+            openChatRequestModal(user);
+            break;
+        case 'busy':
+            openBusyUserModal(user);
+            break;
+        case 'offline':
+            // Do nothing for offline users
+            break;
+    }
+}
+
 function openChatRequestModal(user) {
     requestUserName.textContent = user.username;
     requestUserAvatar.src = user.avatar;
@@ -222,15 +241,32 @@ function closeChatRequestModal() {
     modal.style.display = 'none';
 }
 
+function openBusyUserModal(user) {
+    busyUserName.textContent = user.username;
+    busyUserAvatar.src = user.avatar;
+    busyModal.style.display = 'block';
+}
+
+function closeBusyUserModal() {
+    busyModal.style.display = 'none';
+}
+
 closeModal.addEventListener('click', closeChatRequestModal);
 cancelButton.addEventListener('click', closeChatRequestModal);
 
-// Close modal when clicking outside
+// Close modals when clicking outside
 window.addEventListener('click', (event) => {
     if (event.target === modal) {
         closeChatRequestModal();
     }
+    if (event.target === busyModal) {
+        closeBusyUserModal();
+    }
 });
+
+// Add event listeners for busy modal
+closeBusyModal.addEventListener('click', closeBusyUserModal);
+closeBusyButton.addEventListener('click', closeBusyUserModal);
 
 // Accept chat request
 acceptButton.addEventListener('click', () => {
