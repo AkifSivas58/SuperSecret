@@ -92,3 +92,4 @@ class DB:
 
     def CheckPassword(self, provided_password, stored_password):
         return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password)
+

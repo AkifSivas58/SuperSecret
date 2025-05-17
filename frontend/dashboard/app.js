@@ -347,9 +347,34 @@ acceptButton.addEventListener('click', () => {
 });
 
 // Logout functionality
-logoutButton.addEventListener('click', () => {
-    // In a real app, this would handle proper logout logic
-    window.location.href = '../login/index.html';
+logoutButton.addEventListener('click', async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            // Redirect to login page
+            window.location.href = '../login/index.html';
+        } else {
+            console.error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
 });
 
 // Chat Window Functionality
