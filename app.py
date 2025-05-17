@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 from datetime import datetime
 from cryptography.fernet import Fernet
-from db import DB
+from DataBase import DB
 app = Flask(__name__)
 
 # load_dotenv()
