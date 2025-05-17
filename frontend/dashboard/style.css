@@ -1,0 +1,389 @@
+:root {
+    --background: #1a1a1a;
+    --accent-cyber: #00FFC3;
+    --accent-neural: #17D4A3;
+    --accent-electric: #8A2BE2;
+    --text-primary: #E0E0E0;
+    --text-secondary: #fff;
+    --secondary: #e2e8f0;
+    --gray: #64748b;
+    --light-gray: #f1f5f9;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --vita-blue: #0070CC;
+    --vita-dark: #0B1A29;
+    --panel-bg: rgba(26, 26, 26, 0.85);
+    --bubble-glow: 0 0 15px rgba(0, 255, 195, 0.6);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    position: relative;
+}
+
+#networkCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.dashboard-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+/* Header Styles */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+.header-logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-logo img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-cyber);
+    object-fit: cover;
+}
+
+.header-logo h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--accent-cyber);
+    margin: 0;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.username {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.btn-logout {
+    background: transparent;
+    color: var(--accent-cyber);
+    border: 1px solid var(--accent-cyber);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background-color: var(--accent-cyber);
+    color: var(--background);
+    transform: scale(1.05);
+}
+
+/* Main Content Styles */
+main {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* PS Vita Style User Grid */
+.user-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 70px;
+    margin: 60px auto;
+    position: relative;
+    max-width: 1200px;
+}
+
+/* User Bubble Style */
+.user-bubble {
+    position: relative;
+    width: 130px;
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.user-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--panel-bg);
+    border: 3px solid var(--accent-cyber);
+    box-shadow: var(--bubble-glow);
+    overflow: hidden;
+    transition: all 0.4s ease;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-bubble:hover .user-avatar {
+    transform: scale(1.1);
+    box-shadow: 0 0 25px rgba(0, 255, 195, 0.8);
+}
+
+.user-name {
+    margin-top: 15px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    transition: all 0.3s ease;
+}
+
+.user-bubble:hover .user-name {
+    color: var(--accent-cyber);
+    transform: translateY(5px);
+}
+
+/* Status indicator */
+.status-indicator {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.status-offline {
+    background-color: var(--gray);
+    box-shadow: none;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: var(--panel-bg);
+    margin: 15% auto;
+    padding: 0;
+    width: 400px;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(0, 255, 195, 0.3);
+    animation: modalFadeIn 0.4s;
+    overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--accent-cyber);
+}
+
+.modal-header h2 {
+    color: var(--accent-cyber);
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.close-modal {
+    color: var(--light-gray);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.close-modal:hover {
+    color: var(--accent-cyber);
+}
+
+.request-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.request-user-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--panel-bg);
+    border: 3px solid var(--accent-cyber);
+    box-shadow: var(--bubble-glow);
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.request-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.request-user-info p {
+    text-align: center;
+    line-height: 1.6;
+}
+
+.request-user-info p #requestUserName {
+    color: var(--accent-cyber);
+    font-weight: 600;
+}
+
+.request-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.btn-request-accept, .btn-request-cancel {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-request-accept {
+    background-color: var(--accent-cyber);
+    color: var(--background);
+}
+
+.btn-request-accept:hover {
+    background-color: var(--accent-neural);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(23, 212, 163, 0.4);
+}
+
+.btn-request-cancel {
+    background-color: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.btn-request-cancel:hover {
+    background-color: var(--danger);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+/* For drawing connection lines between users */
+.connection-line {
+    position: absolute;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 195, 0.1), 
+        rgba(0, 255, 195, 0.6), 
+        rgba(0, 255, 195, 0.1));
+    transform-origin: left center;
+    z-index: 1;
+    opacity: 0.6;
+    filter: drop-shadow(0 0 5px rgba(0, 255, 195, 0.5));
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    header {
+        padding: 15px 20px;
+    }
+    
+    .header-logo img {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .header-logo h1 {
+        font-size: 1.2rem;
+    }
+    
+    main {
+        padding: 20px;
+    }
+    
+    .user-grid {
+        gap: 40px;
+        margin: 30px auto;
+    }
+    
+    .user-bubble {
+        width: 110px;
+        height: 150px;
+    }
+    
+    .user-avatar {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .modal-content {
+        width: 90%;
+        margin: 30% auto;
+    }
+}
