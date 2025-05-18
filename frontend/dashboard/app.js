@@ -500,18 +500,32 @@ const btnClose = document.querySelector('.btn-close');
 const btnSend = document.querySelector('.btn-send');
 const blurOverlay = document.getElementById('blurOverlay');
 
+let currentRoomId = null;
+let currentChatUser = null;
+let localMessages = [];
+
 // Open chat window
 function openChatWindow(userName, userAvatar) {
+    currentChatUser = userName;
     chatUserName.textContent = userName;
     // Fix avatar path if it's relative
     if (userAvatar && !userAvatar.startsWith('http')) {
         userAvatar = userAvatar.startsWith('/') ? userAvatar : '/' + userAvatar;
     }
     chatUserAvatar.src = userAvatar;
-    chatWindow.style.width = '900px'; // Set initial width
-    chatWindow.style.height = '550px'; // Set initial height
+    chatWindow.style.width = '900px';
+    chatWindow.style.height = '550px';
     chatWindow.style.display = 'block';
-    blurOverlay.style.display = 'block'; // Show blur overlay
+    blurOverlay.style.display = 'block';
+    
+    // Join chat room
+    socket.emit('join_chat', {
+        other_user: userName
+    });
+    
+    // Clear previous messages
+    chatMessages.innerHTML = '';
+    localMessages = [];
     
     // Add a welcome message
     addMessage(`Merhaba! ${userName} ile zihinsel bağlantı kuruldu.`, 'received');
@@ -522,6 +536,106 @@ function openChatWindow(userName, userAvatar) {
     // Center the window initially
     centerChatWindow();
 }
+
+// Handle chat room joined
+socket.on('chat_joined', (data) => {
+    currentRoomId = data.room_id;
+});
+
+// Add message to chat
+function addMessage(text, type, messageId = null) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message message-${type}`;
+    messageDiv.textContent = text;
+    
+    if (messageId) {
+        messageDiv.dataset.messageId = messageId;
+    }
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to the bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Store message locally if it's a new message
+    if (messageId) {
+        localMessages.push({
+            id: messageId,
+            text: text,
+            type: type,
+            timestamp: new Date().toISOString()
+        });
+    }
+}
+
+// Send message
+function sendMessage() {
+    const text = chatInput.value.trim();
+    if (text === '' || !currentRoomId) return;
+    
+    // Add user message locally
+    addMessage(text, 'sent');
+    
+    // Send message through WebSocket
+    socket.emit('send_message', {
+        room_id: currentRoomId,
+        message: text
+    });
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // Focus back on input
+    chatInput.focus();
+}
+
+// Handle new message
+socket.on('new_message', (data) => {
+    if (data.sender === currentUsername) {
+        // This is our own message, just confirm delivery
+        socket.emit('message_delivered', {
+            message_id: data.message_id
+        });
+    } else {
+        // This is a message from the other user
+        addMessage(data.message, 'received', data.message_id);
+        
+        // Confirm delivery
+        socket.emit('message_delivered', {
+            message_id: data.message_id
+        });
+    }
+});
+
+// Close chat window
+function closeChatWindow() {
+    if (currentRoomId) {
+        // Leave the chat room
+        socket.emit('leave_chat', {
+            room_id: currentRoomId
+        });
+        
+        // Clear room ID and messages
+        currentRoomId = null;
+        currentChatUser = null;
+        localMessages = [];
+    }
+    
+    // Close the window locally
+    chatWindow.style.display = 'none';
+    blurOverlay.style.display = 'none';
+    chatMessages.innerHTML = '';
+    
+    // Reset window position and size for next time
+    centerChatWindow();
+}
+
+// Handle chat ended
+socket.on('chat_ended', (data) => {
+    if (data.room_id === currentRoomId) {
+        closeChatWindow();
+    }
+});
 
 // Center chat window in the screen
 function centerChatWindow() {
@@ -537,81 +651,6 @@ function centerChatWindow() {
     xOffset = currentX;
     yOffset = currentY;
 }
-
-// Close chat window
-function closeChatWindow() {
-    const otherUsername = chatUserName.textContent;
-    
-    // Emit close chat event to server
-    socket.emit('close_chat', {
-        otherUsername: otherUsername
-    });
-    
-    // Close the window locally
-    chatWindow.style.display = 'none';
-    blurOverlay.style.display = 'none'; // Hide blur overlay
-    chatMessages.innerHTML = ''; // Clear chat history
-    
-    // Reset window position and size for next time
-    centerChatWindow();
-}
-
-// Handle chat closed event
-socket.on('chat_closed', (data) => {
-    // Close the chat window if it's open with this user
-    if (chatUserName.textContent === data.username) {
-        chatWindow.style.display = 'none';
-        blurOverlay.style.display = 'none';
-        chatMessages.innerHTML = '';
-        centerChatWindow();
-    }
-});
-
-// Add message to chat
-function addMessage(text, type) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message message-${type}`;
-    messageDiv.textContent = text;
-    
-    chatMessages.appendChild(messageDiv);
-    
-    // Scroll to the bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// Send message
-function sendMessage() {
-    const text = chatInput.value.trim();
-    if (text === '') return;
-    
-    // Add user message
-    addMessage(text, 'sent');
-    
-    // Clear input
-    chatInput.value = '';
-    
-    // In a real app, this would send the message via WebSocket or similar
-    // Simulate a response after a short delay
-    setTimeout(() => {
-        addMessage('Bu özellik şu anda geliştirme aşamasındadır.', 'received');
-    }, 1000);
-}
-
-// Send message on button click
-btnSend.addEventListener('click', sendMessage);
-
-// Send message on Enter key press
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// Close chat window button
-btnClose.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent event from bubbling to header
-    closeChatWindow();
-});
 
 // Make the chat window draggable
 let isDragging = false;
@@ -762,3 +801,19 @@ function updateUserStatus(updatedUser) {
         }
     });
 }
+
+// Send message on button click
+btnSend.addEventListener('click', sendMessage);
+
+// Send message on Enter key press
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Close chat window button
+btnClose.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent event from bubbling to header
+    closeChatWindow();
+});

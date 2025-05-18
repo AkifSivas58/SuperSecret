@@ -14,11 +14,11 @@ import threading
 
 app = Flask(__name__)
 app.config.from_object(Config)
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 fernet = Fernet(app.config['FERNET_KEY'])
 
-socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 db = DB()
 db.CreateDb()
@@ -199,16 +199,19 @@ def handle_join_chat(data):
         username = token_data['username']
         other_user = data['other_user']
         
-        # Create new chat
-        chat_id = db.GetChatID(username, other_user)
-        if not chat_id:
-            db.cursor.execute("INSERT INTO All_messages (MainUser, ConnectionUser) VALUES (?, ?)", 
-                            (username, other_user))
-            chat_id = db.cursor.lastrowid
-            db.CreateChat(chat_id)
+        # Create a unique room ID for the chat
+        room_id = f"chat_{min(username, other_user)}_{max(username, other_user)}"
         
-        join_room(str(chat_id))
-        emit('chat_started', {'chat_id': chat_id, 'other_user': other_user})
+        # Join the room
+        join_room(room_id)
+        
+        # Store room information in user's session
+        if not hasattr(socketio, 'user_rooms'):
+            socketio.user_rooms = {}
+        socketio.user_rooms[username] = room_id
+        
+        emit('chat_joined', {'room_id': room_id, 'other_user': other_user})
+        
     except Exception as e:
         emit('error', {'message': str(e)})
 
@@ -217,23 +220,41 @@ def handle_message(data):
     token = request.args.get('token')
     try:
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
-        username = token_data['username']
-        chat_id = data['chat_id']
+        sender = token_data['username']
+        room_id = data['room_id']
         message = data['message']
         
         # Encrypt message
         encrypted_msg = fernet.encrypt(message.encode())
         
-        # Store message
-        db.AddMessage(chat_id, username, encrypted_msg)
+        # Store message temporarily in database
+        message_id = db.StoreTemporaryMessage(room_id, sender, encrypted_msg)
         
-        # Broadcast to room
-        emit('new_message', {
-            'chat_id': chat_id,
-            'sender': username,
-            'message': message,
-            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }, room=str(chat_id))
+        if message_id:
+            # Broadcast to room
+            emit('new_message', {
+                'message_id': message_id,
+                'sender': sender,
+                'message': message,
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }, room=room_id)
+        else:
+            emit('error', {'message': 'Failed to store message'})
+        
+    except Exception as e:
+        print(f"Error in send_message: {e}")
+        emit('error', {'message': str(e)})
+
+@socketio.on('message_delivered')
+def handle_message_delivered(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = token_data['username']
+        message_id = data['message_id']
+        
+        # Delete message from database after delivery
+        db.DeleteTemporaryMessage(message_id)
         
     except Exception as e:
         emit('error', {'message': str(e)})
@@ -244,12 +265,18 @@ def handle_leave_chat(data):
     try:
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
         username = token_data['username']
-        chat_id = data['chat_id']
+        room_id = data['room_id']
         
-        leave_room(str(chat_id))
-        db.DeleteChat(int(chat_id))
+        # Leave the room
+        leave_room(room_id)
         
-        emit('chat_ended', {'chat_id': chat_id}, room=str(chat_id))
+        # Clear room information
+        if hasattr(socketio, 'user_rooms'):
+            socketio.user_rooms.pop(username, None)
+        
+        # Notify other user
+        emit('chat_ended', {'room_id': room_id}, room=room_id)
+        
     except Exception as e:
         emit('error', {'message': str(e)})
 
