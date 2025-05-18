@@ -388,8 +388,6 @@ main {
     box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
 }
 
-
-
 /* Chat Window Styles */
 .chat-window {
     display: none;
@@ -726,4 +724,113 @@ main {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* Chat Request Notification */
+.chat-request-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid var(--accent-cyber);
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 255, 195, 0.2);
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.notification-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-cyber);
+    object-fit: cover;
+}
+
+.notification-text {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.notification-text strong {
+    color: var(--accent-cyber);
+}
+
+.notification-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.notification-buttons button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.btn-accept {
+    background: var(--accent-cyber);
+    color: var(--background);
+}
+
+.btn-accept:hover {
+    background: var(--accent-neural);
+    transform: translateY(-2px);
+}
+
+.btn-reject {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #da190b;
+    transform: translateY(-2px);
+}
+
+/* Rejection Message */
+.rejection-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 5px;
+    font-size: 14px;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }

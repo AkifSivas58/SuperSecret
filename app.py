@@ -8,6 +8,9 @@ from DataBase import DB
 from jose import jwt
 from functools import wraps
 from config import Config
+import uuid
+import time
+import threading
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -19,6 +22,9 @@ socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://
 
 db = DB()
 db.CreateDb()
+
+# Store active chat requests
+active_chat_requests = {}
 
 def token_required(f):
     @wraps(f)
@@ -139,6 +145,9 @@ def handle_connect():
         # Update user status to idle when connecting
         db.SetUserStatus(username, 'idle')
         
+        # Join user to their personal room
+        join_room(username)
+        
         # Broadcast updated user list to all clients
         users = db.GetAllUsers()
         emit('userList', {'users': users}, broadcast=True)
@@ -243,6 +252,137 @@ def handle_leave_chat(data):
         emit('chat_ended', {'chat_id': chat_id}, room=str(chat_id))
     except Exception as e:
         emit('error', {'message': str(e)})
+
+@socketio.on('chat_request')
+def handle_chat_request(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        sender_username = token_data['username']
+        target_username = data['targetUsername']
+        
+        # Generate unique request ID
+        request_id = str(uuid.uuid4())
+        
+        # Store request data
+        active_chat_requests[request_id] = {
+            'sender': sender_username,
+            'target': target_username,
+            'timestamp': datetime.now()
+        }
+        
+        # Get sender user data with default avatar
+        sender_user = db.GetUser(sender_username)
+        sender_avatar = sender_user.get('avatar', '/assets/Uzaylı_1.png')
+        
+        # Send request to target user's room
+        socketio.emit('chat_request_received', {
+            'requestId': request_id,
+            'senderUsername': sender_username,
+            'senderAvatar': sender_avatar
+        }, room=target_username)
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+@socketio.on('chat_request_response')
+def handle_chat_request_response(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        responder_username = token_data['username']
+        request_id = data['requestId']
+        accepted = data['accepted']
+        
+        # Get request data
+        request_data = active_chat_requests.get(request_id)
+        if not request_data:
+            return
+        
+        # Verify responder is the target
+        if request_data['target'] != responder_username:
+            return
+        
+        # Get responder user data with default avatar
+        responder_user = db.GetUser(responder_username)
+        responder_avatar = responder_user.get('avatar', '/assets/Uzaylı_1.png')
+        
+        # Get sender user data with default avatar
+        sender_user = db.GetUser(request_data['sender'])
+        sender_avatar = sender_user.get('avatar', '/assets/Uzaylı_1.png')
+        
+        if accepted:
+            # Update both users' status to busy
+            db.SetUserStatus(request_data['sender'], 'busy')
+            db.SetUserStatus(responder_username, 'busy')
+            
+            # Broadcast status updates
+            users = db.GetAllUsers()
+            emit('userList', {'users': users}, broadcast=True)
+            
+            # Send response to sender's room
+            socketio.emit('chat_request_response', {
+                'accepted': True,
+                'targetUsername': responder_username,
+                'targetAvatar': responder_avatar
+            }, room=request_data['sender'])
+            
+            # Send chat window open event to responder
+            socketio.emit('open_chat_window', {
+                'username': request_data['sender'],
+                'avatar': sender_avatar
+            }, room=responder_username)
+        
+        # Remove request from active requests
+        del active_chat_requests[request_id]
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+@socketio.on('close_chat')
+def handle_close_chat(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        current_username = token_data['username']
+        other_username = data['otherUsername']
+        
+        # Update both users' status to idle
+        db.SetUserStatus(current_username, 'idle')
+        db.SetUserStatus(other_username, 'idle')
+        
+        # Broadcast status updates
+        users = db.GetAllUsers()
+        emit('userList', {'users': users}, broadcast=True)
+        
+        # Notify other user about chat closure
+        socketio.emit('chat_closed', {
+            'username': current_username
+        }, room=other_username)
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+# Clean up expired requests periodically
+def cleanup_expired_requests():
+    now = datetime.now()
+    expired = []
+    for request_id, request_data in active_chat_requests.items():
+        if (now - request_data['timestamp']).total_seconds() > 300:  # 5 minutes
+            expired.append(request_id)
+    
+    for request_id in expired:
+        del active_chat_requests[request_id]
+
+# Start cleanup task
+def start_cleanup_task():
+    while True:
+        cleanup_expired_requests()
+        time.sleep(60)  # Check every minute
+
+cleanup_thread = threading.Thread(target=start_cleanup_task)
+cleanup_thread.daemon = True
+cleanup_thread.start()
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)
