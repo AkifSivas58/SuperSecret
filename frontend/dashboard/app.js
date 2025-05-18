@@ -168,7 +168,43 @@ const cancelButton = document.querySelector('.btn-request-cancel');
 const acceptButton = document.querySelector('.btn-request-accept');
 const requestUserName = document.getElementById('requestUserName');
 const requestUserAvatar = document.getElementById('requestUserAvatar');
+const busyModal = document.getElementById('busyUserModal');
+const busyUserName = document.getElementById('busyUserName');
+const busyUserAvatar = document.getElementById('busyUserAvatar');
+const closeBusyModal = document.querySelector('.close-busy-modal');
+const closeBusyButton = document.querySelector('.close-busy-button');
 const logoutButton = document.getElementById('logout');
+
+// Initialize Socket.IO connection
+const token = localStorage.getItem('token');
+const socket = io('http://localhost:5000', {
+    query: { token }
+});
+
+// Socket.IO event listeners
+socket.on('connect', () => {
+    console.log('Socket.IO connection established');
+});
+
+socket.on('userStatusUpdate', (data) => {
+    updateUserStatus(data.user);
+});
+
+socket.on('userList', (data) => {
+    createUserElements(data.users);
+});
+
+socket.on('disconnect', () => {
+    console.log('Socket.IO connection closed');
+    // Try to reconnect after 5 seconds
+    setTimeout(() => {
+        window.location.reload();
+    }, 5000);
+});
+
+socket.on('error', (error) => {
+    console.error('Socket.IO error:', error);
+});
 
 // Set current user from localStorage
 const currentUsername = localStorage.getItem('username');
@@ -258,13 +294,6 @@ function createUserElements(users) {
     });
 }
 
-// Modal functionality
-const busyModal = document.getElementById('busyUserModal');
-const busyUserName = document.getElementById('busyUserName');
-const busyUserAvatar = document.getElementById('busyUserAvatar');
-const closeBusyModal = document.querySelector('.close-busy-modal');
-const closeBusyButton = document.querySelector('.close-busy-button');
-
 // Handle user click based on status
 function handleUserClick(user) {
     switch(user.status) {
@@ -346,21 +375,87 @@ acceptButton.addEventListener('click', () => {
     const loadingContainer = document.querySelector('.loading-container');
     loadingContainer.style.display = 'flex';
     
-    // Simulate request delay (3 seconds)
-    setTimeout(() => {
-        // Hide loading animation
-        loadingContainer.style.display = 'none';
-        
+    // Get user info from modal
+    const targetUsername = requestUserName.textContent;
+    
+    // Emit chat request to server
+    socket.emit('chat_request', {
+        targetUsername: targetUsername
+    });
+});
+
+// Handle incoming chat requests
+socket.on('chat_request_received', (data) => {
+    // Show notification to target user
+    const notification = document.createElement('div');
+    notification.className = 'chat-request-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <img src="${data.senderAvatar}" alt="${data.senderUsername}" class="notification-avatar">
+            <div class="notification-text">
+                <strong>${data.senderUsername}</strong> sizinle sohbet etmek istiyor
+            </div>
+            <div class="notification-buttons">
+                <button class="btn-accept">Kabul Et</button>
+                <button class="btn-reject">Reddet</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add event listeners to buttons
+    const acceptBtn = notification.querySelector('.btn-accept');
+    const rejectBtn = notification.querySelector('.btn-reject');
+    
+    acceptBtn.addEventListener('click', () => {
+        socket.emit('chat_request_response', {
+            requestId: data.requestId,
+            accepted: true
+        });
+        notification.remove();
+    });
+    
+    rejectBtn.addEventListener('click', () => {
+        socket.emit('chat_request_response', {
+            requestId: data.requestId,
+            accepted: false
+        });
+        notification.remove();
+    });
+});
+
+// Handle chat request response
+socket.on('chat_request_response', (data) => {
+    const loadingContainer = document.querySelector('.loading-container');
+    loadingContainer.style.display = 'none';
+    
+    if (data.accepted) {
         // Close the modal and open chat window
         closeChatRequestModal();
         
-        // Get user info from modal
-        const userName = requestUserName.textContent;
-        const userAvatar = requestUserAvatar.src;
+        // Open chat window with the user
+        openChatWindow(data.targetUsername, data.targetAvatar);
+    } else {
+        // Show rejection message
+        const rejectionMessage = document.createElement('div');
+        rejectionMessage.className = 'rejection-message';
+        rejectionMessage.textContent = `${data.targetUsername} sohbet isteğinizi reddetti.`;
+        document.body.appendChild(rejectionMessage);
         
-        // Open chat window
-        openChatWindow(userName, userAvatar);
-    }, 3000);
+        // Remove message after 3 seconds
+        setTimeout(() => {
+            rejectionMessage.remove();
+        }, 3000);
+        
+        // Close the modal
+        closeChatRequestModal();
+    }
+});
+
+// Handle open chat window event
+socket.on('open_chat_window', (data) => {
+    openChatWindow(data.username, data.avatar);
 });
 
 // Logout functionality
@@ -408,6 +503,10 @@ const blurOverlay = document.getElementById('blurOverlay');
 // Open chat window
 function openChatWindow(userName, userAvatar) {
     chatUserName.textContent = userName;
+    // Fix avatar path if it's relative
+    if (userAvatar && !userAvatar.startsWith('http')) {
+        userAvatar = userAvatar.startsWith('/') ? userAvatar : '/' + userAvatar;
+    }
     chatUserAvatar.src = userAvatar;
     chatWindow.style.width = '900px'; // Set initial width
     chatWindow.style.height = '550px'; // Set initial height
@@ -441,6 +540,14 @@ function centerChatWindow() {
 
 // Close chat window
 function closeChatWindow() {
+    const otherUsername = chatUserName.textContent;
+    
+    // Emit close chat event to server
+    socket.emit('close_chat', {
+        otherUsername: otherUsername
+    });
+    
+    // Close the window locally
     chatWindow.style.display = 'none';
     blurOverlay.style.display = 'none'; // Hide blur overlay
     chatMessages.innerHTML = ''; // Clear chat history
@@ -448,6 +555,17 @@ function closeChatWindow() {
     // Reset window position and size for next time
     centerChatWindow();
 }
+
+// Handle chat closed event
+socket.on('chat_closed', (data) => {
+    // Close the chat window if it's open with this user
+    if (chatUserName.textContent === data.username) {
+        chatWindow.style.display = 'none';
+        blurOverlay.style.display = 'none';
+        chatMessages.innerHTML = '';
+        centerChatWindow();
+    }
+});
 
 // Add message to chat
 function addMessage(text, type) {
@@ -611,36 +729,6 @@ blurOverlay.addEventListener('click', (e) => {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     fetchUsers();
-    
-    // Socket.IO connection
-    const token = localStorage.getItem('token');
-    const socket = io('http://localhost:5000', {
-        query: { token }
-    });
-    
-    socket.on('connect', () => {
-        console.log('Socket.IO connection established');
-    });
-    
-    socket.on('userStatusUpdate', (data) => {
-        updateUserStatus(data.user);
-    });
-    
-    socket.on('userList', (data) => {
-        createUserElements(data.users);
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('Socket.IO connection closed');
-        // Try to reconnect after 5 seconds
-        setTimeout(() => {
-            window.location.reload();
-        }, 5000);
-    });
-    
-    socket.on('error', (error) => {
-        console.error('Socket.IO error:', error);
-    });
 });
 
 // Update specific user's status
