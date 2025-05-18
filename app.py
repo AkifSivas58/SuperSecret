@@ -11,11 +11,13 @@ from config import Config
 import uuid
 import time
 import threading
+import MessageChecker
 
 app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 
+ml = MessageChecker.Models()
 fernet = Fernet(app.config['FERNET_KEY'])
 
 socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000"], 
@@ -340,6 +342,11 @@ def handle_message(data):
         
         chat_id = active_chats[username]['chat_id']
         
+        is_bad = ml.IsBadMessage(message)
+
+        if (is_bad):
+            message = "Bu düşünce spam veya kötü mesaj içeriyor!"
+
         # Encrypt message before storing
         encrypted_msg = fernet.encrypt(message.encode())
         
