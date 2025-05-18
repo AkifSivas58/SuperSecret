@@ -198,17 +198,45 @@ def handle_join_chat(data):
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
         username = token_data['username']
         other_user = data['other_user']
+        message = data.get('message')  # Get optional message parameter
         
-        # Create new chat
+        # Create or get existing chat
         chat_id = db.GetChatID(username, other_user)
         if not chat_id:
+            chat_id = db.GetChatID(other_user, username)  # Check reverse order
+            
+        if not chat_id:
+            # Create new chat if it doesn't exist
             db.cursor.execute("INSERT INTO All_messages (MainUser, ConnectionUser) VALUES (?, ?)", 
                             (username, other_user))
             chat_id = db.cursor.lastrowid
             db.CreateChat(chat_id)
         
+        # Join both users to the chat room
         join_room(str(chat_id))
-        emit('chat_started', {'chat_id': chat_id, 'other_user': other_user})
+        
+        # Get chat history
+        messages = db.GetMessages(chat_id)
+        decrypted_messages = []
+        for msg in messages:
+            try:
+                decrypted_text = fernet.decrypt(msg[2]).decode()
+                decrypted_messages.append({
+                    'time': msg[0],
+                    'sender': msg[1],
+                    'message': decrypted_text
+                })
+            except:
+                continue
+        
+        # Send chat history and chat started event
+        emit('chat_started', {
+            'chat_id': chat_id,
+            'other_user': other_user,
+            'messages': decrypted_messages,
+            'message': message  # Pass the message back if it exists
+        })
+        
     except Exception as e:
         emit('error', {'message': str(e)})
 
@@ -221,13 +249,13 @@ def handle_message(data):
         chat_id = data['chat_id']
         message = data['message']
         
-        # Encrypt message
+        # Encrypt message before storing
         encrypted_msg = fernet.encrypt(message.encode())
         
-        # Store message
+        # Store message in database
         db.AddMessage(chat_id, username, encrypted_msg)
         
-        # Broadcast to room
+        # Broadcast to chat room
         emit('new_message', {
             'chat_id': chat_id,
             'sender': username,

@@ -584,27 +584,62 @@ function sendMessage() {
     const text = chatInput.value.trim();
     if (text === '') return;
     
-    // Add user message
-    addMessage(text, 'sent');
+    // Store the message temporarily
+    const messageToSend = text;
     
-    // Clear input
+    // Clear input immediately for better UX
     chatInput.value = '';
     
-    // In a real app, this would send the message via WebSocket or similar
-    // Simulate a response after a short delay
-    setTimeout(() => {
-        addMessage('Bu özellik şu anda geliştirme aşamasındadır.', 'received');
-    }, 1000);
+    // Get chat partner's username
+    const otherUser = chatUserName.textContent;
+    
+    // Get chat ID and send message
+    socket.emit('join_chat', { 
+        other_user: otherUser,
+        message: messageToSend  // Pass the message along with the join request
+    });
 }
 
-// Send message on button click
-btnSend.addEventListener('click', sendMessage);
+// Handle chat started event
+socket.on('chat_started', (data) => {
+    const chatId = data.chat_id;
+    
+    // Clear existing messages
+    chatMessages.innerHTML = '';
+    
+    // Display chat history
+    if (data.messages && data.messages.length > 0) {
+        data.messages.forEach(msg => {
+            const messageType = msg.sender === chatUserName.textContent ? 'received' : 'sent';
+            addMessage(msg.message, messageType);
+        });
+    }
+    
+    // If there's a pending message from the join request, send it
+    if (data.message) {
+        socket.emit('send_message', {
+            chat_id: chatId,
+            message: data.message
+        });
+    }
+});
+
+// Handle new messages
+socket.on('new_message', (data) => {
+    const messageType = data.sender === chatUserName.textContent ? 'received' : 'sent';
+    addMessage(data.message, messageType);
+});
 
 // Send message on Enter key press
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         sendMessage();
     }
+});
+
+// Send message on button click
+btnSend.addEventListener('click', () => {
+    sendMessage();
 });
 
 // Close chat window button
