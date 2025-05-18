@@ -524,6 +524,11 @@ function openChatWindow(userName, userAvatar) {
     // Add a welcome message
     addMessage(`Merhaba! ${userName} ile zihinsel bağlantı kuruldu.`, 'received');
     
+    // Join the chat room immediately
+    socket.emit('join_chat', { 
+        other_user: userName
+    });
+    
     // Focus on the input
     chatInput.focus();
     
@@ -592,27 +597,22 @@ function sendMessage() {
     const text = chatInput.value.trim();
     if (text === '') return;
     
-    // Store the message temporarily
-    const messageToSend = text;
+    // Get chat partner's username
+    const otherUser = chatUserName.textContent;
     
     // Clear input immediately for better UX
     chatInput.value = '';
     
-    // Get chat partner's username
-    const otherUser = chatUserName.textContent;
-    
-    // Get chat ID and send message
-    socket.emit('join_chat', { 
+    // Send message through WebSocket
+    socket.emit('send_message', {
         other_user: otherUser,
-        message: messageToSend  // Pass the message along with the join request
+        message: text
     });
 }
 
 // Handle chat started event
 socket.on('chat_started', (data) => {
-    const chatId = data.chat_id;
-    
-    // Clear existing messages
+    // Clear existing messages first
     chatMessages.innerHTML = '';
     
     // Display chat history
@@ -622,18 +622,11 @@ socket.on('chat_started', (data) => {
             addMessage(msg.message, messageType);
         });
     }
-    
-    // If there's a pending message from the join request, send it
-    if (data.message) {
-        socket.emit('send_message', {
-            chat_id: chatId,
-            message: data.message
-        });
-    }
 });
 
 // Handle new messages
 socket.on('new_message', (data) => {
+    // Add message only if it's from the other user or if it's a confirmation of our message
     const messageType = data.sender === chatUserName.textContent ? 'received' : 'sent';
     addMessage(data.message, messageType);
 });

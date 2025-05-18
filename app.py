@@ -198,7 +198,6 @@ def handle_join_chat(data):
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
         username = token_data['username']
         other_user = data['other_user']
-        message = data.get('message')  # Get optional message parameter
         
         # Create or get existing chat
         chat_id = db.GetChatID(username, other_user)
@@ -229,12 +228,16 @@ def handle_join_chat(data):
             except:
                 continue
         
+        # Store chat ID in user's session data
+        session = {}
+        session['chat_id'] = chat_id
+        session['other_user'] = other_user
+        
         # Send chat history and chat started event
         emit('chat_started', {
             'chat_id': chat_id,
             'other_user': other_user,
-            'messages': decrypted_messages,
-            'message': message  # Pass the message back if it exists
+            'messages': decrypted_messages
         })
         
     except Exception as e:
@@ -246,8 +249,16 @@ def handle_message(data):
     try:
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
         username = token_data['username']
-        chat_id = data['chat_id']
+        other_user = data['other_user']
         message = data['message']
+        
+        # Get chat ID
+        chat_id = db.GetChatID(username, other_user)
+        if not chat_id:
+            chat_id = db.GetChatID(other_user, username)
+        
+        if not chat_id:
+            raise Exception("Chat room not found")
         
         # Encrypt message before storing
         encrypted_msg = fernet.encrypt(message.encode())
@@ -255,9 +266,8 @@ def handle_message(data):
         # Store message in database
         db.AddMessage(chat_id, username, encrypted_msg)
         
-        # Broadcast to chat room
+        # Broadcast to chat room (including sender for confirmation)
         emit('new_message', {
-            'chat_id': chat_id,
             'sender': username,
             'message': message,
             'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
