@@ -175,10 +175,15 @@ const closeBusyModal = document.querySelector('.close-busy-modal');
 const closeBusyButton = document.querySelector('.close-busy-button');
 const logoutButton = document.getElementById('logout');
 
-// Initialize Socket.IO connection
+// Initialize Socket.IO connection with reconnection options
 const token = localStorage.getItem('token');
 const socket = io('http://localhost:5000', {
-    query: { token }
+    query: { token },
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000
 });
 
 // Socket.IO event listeners
@@ -194,16 +199,63 @@ socket.on('userList', (data) => {
     createUserElements(data.users);
 });
 
-socket.on('disconnect', () => {
-    console.log('Socket.IO connection closed');
-    // Try to reconnect after 5 seconds
-    setTimeout(() => {
-        window.location.reload();
-    }, 5000);
+socket.on('disconnect', (reason) => {
+    console.log('Socket disconnected:', reason);
+    if (reason === 'io server disconnect') {
+        // Server initiated disconnect, try to reconnect
+        socket.connect();
+    }
 });
 
-socket.on('error', (error) => {
-    console.error('Socket.IO error:', error);
+socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
+});
+
+socket.on('connect_timeout', () => {
+    console.error('Socket connection timeout');
+});
+
+socket.on('reconnect', (attemptNumber) => {
+    console.log('Socket reconnected after', attemptNumber, 'attempts');
+});
+
+socket.on('reconnect_attempt', (attemptNumber) => {
+    console.log('Socket reconnection attempt:', attemptNumber);
+});
+
+socket.on('reconnect_error', (error) => {
+    console.error('Socket reconnection error:', error);
+});
+
+socket.on('reconnect_failed', () => {
+    console.error('Socket reconnection failed');
+    alert('Connection lost. Please refresh the page.');
+});
+
+// Handle user disconnection notification
+socket.on('user_disconnected', (data) => {
+    console.log('User disconnected:', data.username);
+    if (chatUserName.textContent === data.username) {
+        // Show temporary notification
+        const notification = document.createElement('div');
+        notification.className = 'user-disconnected-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-text">
+                    <strong>${data.username}</strong> bağlantısı kesildi. Yeniden bağlanması bekleniyor...
+                </div>
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 5000);
+    }
 });
 
 // Set current user from localStorage
@@ -384,49 +436,12 @@ acceptButton.addEventListener('click', () => {
     });
 });
 
-// Handle incoming chat requests
-socket.on('chat_request_received', (data) => {
-    // Show notification to target user
-    const notification = document.createElement('div');
-    notification.className = 'chat-request-notification';
-    notification.innerHTML = `
-        <div class="notification-content">
-            <img src="${data.senderAvatar}" alt="${data.senderUsername}" class="notification-avatar">
-            <div class="notification-text">
-                <strong>${data.senderUsername}</strong> sizinle sohbet etmek istiyor
-            </div>
-            <div class="notification-buttons">
-                <button class="btn-accept">Kabul Et</button>
-                <button class="btn-reject">Reddet</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Add event listeners to buttons
-    const acceptBtn = notification.querySelector('.btn-accept');
-    const rejectBtn = notification.querySelector('.btn-reject');
-    
-    acceptBtn.addEventListener('click', () => {
-        socket.emit('chat_request_response', {
-            requestId: data.requestId,
-            accepted: true
-        });
-        notification.remove();
-    });
-    
-    rejectBtn.addEventListener('click', () => {
-        socket.emit('chat_request_response', {
-            requestId: data.requestId,
-            accepted: false
-        });
-        notification.remove();
-    });
-});
+// Add currentChatRoom variable to track active chat room
+let currentChatRoom = null;
 
 // Handle chat request response
 socket.on('chat_request_response', (data) => {
+    console.log('Received chat request response:', data);
     const loadingContainer = document.querySelector('.loading-container');
     loadingContainer.style.display = 'none';
     
@@ -434,6 +449,8 @@ socket.on('chat_request_response', (data) => {
     closeChatRequestModal();
     
     if (data.accepted) {
+        console.log('Opening chat window for:', data.targetUsername);
+        currentChatRoom = data.chatId;
         // Open chat window with the user
         openChatWindow(data.targetUsername, data.targetAvatar);
     } else {
@@ -463,39 +480,143 @@ socket.on('chat_request_response', (data) => {
 
 // Handle open chat window event
 socket.on('open_chat_window', (data) => {
+    console.log('Received open chat window event:', data);
+    currentChatRoom = data.chatId;
     openChatWindow(data.username, data.avatar);
 });
 
-// Logout functionality
-logoutButton.addEventListener('click', async () => {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '../login/index.html';
-            return;
-        }
-
-        const response = await fetch('http://localhost:5000/logout', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.ok) {
-            // Clear local storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('username');
-            // Redirect to login page
-            window.location.href = '../login/index.html';
-        } else {
-            console.error('Logout failed');
-        }
-    } catch (error) {
-        console.error('Logout error:', error);
+// Handle chat ended event
+socket.on('chat_ended', (data) => {
+    console.log('Chat ended by:', data.username);
+    // Close the chat window if it's open with this user
+    if (chatUserName.textContent === data.username) {
+        currentChatRoom = null;
+        chatWindow.style.display = 'none';
+        blurOverlay.style.display = 'none';
+        chatMessages.innerHTML = '';
+        centerChatWindow();
+        
+        // Show notification
+        const notification = document.createElement('div');
+        notification.className = 'chat-ended-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-text">
+                    <strong>${data.username}</strong> bağlantıyı sonlandırdı.
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
     }
 });
+
+// Handle force close chat event
+socket.on('force_close_chat', (data) => {
+    console.log('Chat force closed by:', data.username);
+    
+    // Show notification
+    const notification = document.createElement('div');
+    notification.className = 'chat-ended-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-text">
+                <strong>${data.username}</strong> sohbeti sonlandırdı.
+            </div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+    
+    // Close chat window
+    if (chatWindow.style.display === 'block') {
+        chatWindow.style.display = 'none';
+        blurOverlay.style.display = 'none';
+        chatMessages.innerHTML = '';
+        currentChatRoom = null;
+        centerChatWindow();
+    }
+});
+
+// Handle error events
+socket.on('error', (data) => {
+    console.error('Socket error:', data.message);
+    
+    // Show error notification
+    const notification = document.createElement('div');
+    notification.className = 'error-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-text">
+                <strong>Hata:</strong> ${data.message}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 5 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 5000);
+});
+
+// Close chat window
+function closeChatWindow() {
+    const otherUsername = chatUserName.textContent;
+    
+    console.log('Closing chat with:', otherUsername);
+    
+    // Emit close chat event to server
+    socket.emit('close_chat', {
+        otherUsername: otherUsername
+    });
+    
+    // Close the window locally
+    chatWindow.style.display = 'none';
+    blurOverlay.style.display = 'none';
+    chatMessages.innerHTML = ''; // Clear chat history
+    currentChatRoom = null;
+    
+    // Reset window position and size for next time
+    centerChatWindow();
+}
+
+// Send message
+function sendMessage() {
+    const text = chatInput.value.trim();
+    if (text === '' || !currentChatRoom) return;
+    
+    // Get chat partner's username
+    const otherUser = chatUserName.textContent;
+    
+    // Clear input immediately for better UX
+    chatInput.value = '';
+    
+    // Send message through WebSocket
+    socket.emit('send_message', {
+        other_user: otherUser,
+        message: text,
+        chat_id: currentChatRoom
+    });
+}
 
 // Chat Window Functionality
 const chatWindow = document.getElementById('chatWindow');
@@ -510,6 +631,17 @@ const blurOverlay = document.getElementById('blurOverlay');
 
 // Open chat window
 function openChatWindow(userName, userAvatar) {
+    console.log('Opening chat window for:', userName, 'with avatar:', userAvatar);
+    
+    if (!chatWindow || !chatUserName || !chatUserAvatar) {
+        console.error('Chat window elements not found:', {
+            chatWindow: !!chatWindow,
+            chatUserName: !!chatUserName,
+            chatUserAvatar: !!chatUserAvatar
+        });
+        return;
+    }
+    
     chatUserName.textContent = userName;
     // Fix avatar path if it's relative
     if (userAvatar && !userAvatar.startsWith('http')) {
@@ -551,35 +683,6 @@ function centerChatWindow() {
     yOffset = currentY;
 }
 
-// Close chat window
-function closeChatWindow() {
-    const otherUsername = chatUserName.textContent;
-    
-    // Emit end chat event to server
-    socket.emit('end_chat', {
-        other_user: otherUsername
-    });
-    
-    // Close the window locally
-    chatWindow.style.display = 'none';
-    blurOverlay.style.display = 'none'; // Hide blur overlay
-    chatMessages.innerHTML = ''; // Clear chat history
-    
-    // Reset window position and size for next time
-    centerChatWindow();
-}
-
-// Handle chat ended event
-socket.on('chat_ended', (data) => {
-    // Close the chat window if it's open with this user
-    if (chatUserName.textContent === data.username) {
-        chatWindow.style.display = 'none';
-        blurOverlay.style.display = 'none';
-        chatMessages.innerHTML = '';
-        centerChatWindow();
-    }
-});
-
 // Add message to chat
 function addMessage(text, type) {
     const messageDiv = document.createElement('div');
@@ -591,45 +694,6 @@ function addMessage(text, type) {
     // Scroll to the bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
-// Send message
-function sendMessage() {
-    const text = chatInput.value.trim();
-    if (text === '') return;
-    
-    // Get chat partner's username
-    const otherUser = chatUserName.textContent;
-    
-    // Clear input immediately for better UX
-    chatInput.value = '';
-    
-    // Send message through WebSocket
-    socket.emit('send_message', {
-        other_user: otherUser,
-        message: text
-    });
-}
-
-// Handle chat started event
-socket.on('chat_started', (data) => {
-    // Clear existing messages first
-    chatMessages.innerHTML = '';
-    
-    // Display chat history
-    if (data.messages && data.messages.length > 0) {
-        data.messages.forEach(msg => {
-            const messageType = msg.sender === chatUserName.textContent ? 'received' : 'sent';
-            addMessage(msg.message, messageType);
-        });
-    }
-});
-
-// Handle new messages
-socket.on('new_message', (data) => {
-    // Add message only if it's from the other user or if it's a confirmation of our message
-    const messageType = data.sender === chatUserName.textContent ? 'received' : 'sent';
-    addMessage(data.message, messageType);
-});
 
 // Send message on Enter key press
 chatInput.addEventListener('keypress', (e) => {
@@ -808,4 +872,100 @@ window.addEventListener('beforeunload', () => {
             other_user: otherUser
         });
     }
+});
+
+// Handle incoming chat requests
+socket.on('chat_request_received', (data) => {
+    console.log('Received chat request from:', data.senderUsername);
+    // Show notification to target user
+    const notification = document.createElement('div');
+    notification.className = 'chat-request-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <img src="${data.senderAvatar}" alt="${data.senderUsername}" class="notification-avatar">
+            <div class="notification-text">
+                <strong>${data.senderUsername}</strong> sizinle sohbet etmek istiyor
+            </div>
+            <div class="notification-buttons">
+                <button class="btn-accept">Kabul Et</button>
+                <button class="btn-reject">Reddet</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add event listeners to buttons
+    const acceptBtn = notification.querySelector('.btn-accept');
+    const rejectBtn = notification.querySelector('.btn-reject');
+    
+    acceptBtn.addEventListener('click', () => {
+        socket.emit('chat_request_response', {
+            requestId: data.requestId,
+            accepted: true
+        });
+        notification.remove();
+    });
+    
+    rejectBtn.addEventListener('click', () => {
+        socket.emit('chat_request_response', {
+            requestId: data.requestId,
+            accepted: false
+        });
+        notification.remove();
+    });
+});
+
+// Logout functionality
+logoutButton.addEventListener('click', async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            // Redirect to login page
+            window.location.href = '../login/index.html';
+        } else {
+            console.error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+});
+
+// Handle chat started event
+socket.on('chat_started', (data) => {
+    console.log('Chat started:', data);
+    // Clear existing messages first
+    chatMessages.innerHTML = '';
+    
+    // Display chat history
+    if (data.messages && data.messages.length > 0) {
+        data.messages.forEach(msg => {
+            const messageType = msg.sender === chatUserName.textContent ? 'received' : 'sent';
+            addMessage(msg.message, messageType);
+        });
+    }
+});
+
+// Handle new messages
+socket.on('new_message', (data) => {
+    console.log('New message received:', data);
+    // Add message only if it's from the other user or if it's a confirmation of our message
+    const messageType = data.sender === chatUserName.textContent ? 'received' : 'sent';
+    addMessage(data.message, messageType);
 });
