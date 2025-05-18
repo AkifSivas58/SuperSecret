@@ -299,6 +299,33 @@ if (registerPasswordInput && passwordStrengthBar) {
     });
 }
 
+// Create notification function
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add show class after a small delay for animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Remove notification after delay
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
 if (registerForm) {
     registerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -310,7 +337,7 @@ if (registerForm) {
         const password2 = password2Input.value;
 
         if (password !== password2) {
-            alert('Şifreler eşleşmiyor!');
+            showNotification('Şifreler eşleşmiyor!', 'error');
             return;
         }
 
@@ -333,16 +360,22 @@ if (registerForm) {
             const data = await response.json();
 
             if (response.ok) {
+                // Show success notification
+                showNotification('Kayıt başarılı! Yönlendiriliyorsunuz...');
+                
                 // Store both token and username in localStorage
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('username', data.username);
-                // Redirect to dashboard
-                window.location.href = '../dashboard/index.html';
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    window.location.href = '../dashboard/index.html';
+                }, 2000);
             } else {
-                alert(data.error || 'Kayıt başarısız');
+                showNotification(data.error || 'Kayıt başarısız', 'error');
             }
         } catch (error) {
-            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+            showNotification('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
             console.error('Register error:', error);
         }
     });

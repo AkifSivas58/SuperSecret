@@ -215,4 +215,55 @@ label {
     .auth-panel {
         padding: 2rem 1.5rem;
     }
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    background: rgba(26, 26, 26, 0.95);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: translateX(120%);
+    transition: transform 0.3s ease-out;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-content i {
+    font-size: 20px;
+}
+
+.notification-success {
+    border: 1px solid var(--accent-cyber);
+}
+
+.notification-success i {
+    color: var(--accent-cyber);
+}
+
+.notification-error {
+    border: 1px solid var(--danger);
+}
+
+.notification-error i {
+    color: var(--danger);
+}
+
+.notification span {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
 } 
