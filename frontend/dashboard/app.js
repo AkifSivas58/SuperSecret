@@ -430,26 +430,34 @@ socket.on('chat_request_response', (data) => {
     const loadingContainer = document.querySelector('.loading-container');
     loadingContainer.style.display = 'none';
     
+    // Close the request modal
+    closeChatRequestModal();
+    
     if (data.accepted) {
-        // Close the modal and open chat window
-        closeChatRequestModal();
-        
         // Open chat window with the user
         openChatWindow(data.targetUsername, data.targetAvatar);
     } else {
-        // Show rejection message
-        const rejectionMessage = document.createElement('div');
-        rejectionMessage.className = 'rejection-message';
-        rejectionMessage.textContent = `${data.targetUsername} sohbet isteğinizi reddetti.`;
-        document.body.appendChild(rejectionMessage);
+        // Create and show rejection notification
+        const notification = document.createElement('div');
+        notification.className = 'rejection-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <img src="${data.targetAvatar}" alt="${data.targetUsername}" class="notification-avatar">
+                <div class="notification-text">
+                    <strong>${data.targetUsername}</strong> bağlantı isteğinizi reddetti.
+                </div>
+            </div>
+        `;
         
-        // Remove message after 3 seconds
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
         setTimeout(() => {
-            rejectionMessage.remove();
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                notification.remove();
+            }, 300); // Wait for fade animation
         }, 3000);
-        
-        // Close the modal
-        closeChatRequestModal();
     }
 });
 

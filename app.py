@@ -360,6 +360,13 @@ def handle_chat_request_response(data):
                 'username': request_data['sender'],
                 'avatar': sender_avatar
             }, room=responder_username)
+        else:
+            # Send rejection response to sender's room
+            socketio.emit('chat_request_response', {
+                'accepted': False,
+                'targetUsername': responder_username,
+                'targetAvatar': responder_avatar
+            }, room=request_data['sender'])
         
         # Remove request from active requests
         del active_chat_requests[request_id]
