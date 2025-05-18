@@ -102,3 +102,29 @@ class DB:
     def CheckPassword(self, provided_password, stored_password):
         return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password)
 
+    def GetActiveChats(self, username):
+        """Get all active chats for a user"""
+        self.cursor.execute("""
+            SELECT ChatID, MainUser, ConnectionUser 
+            FROM All_messages 
+            WHERE MainUser=? OR ConnectionUser=?
+        """, (username, username))
+        
+        chats = self.cursor.fetchall()
+        active_chats = []
+        
+        for chat in chats:
+            chat_id = chat[0]
+            main_user = chat[1]
+            connection_user = chat[2]
+            
+            # Determine the other user
+            other_user = connection_user if main_user == username else main_user
+            
+            active_chats.append({
+                'chat_id': chat_id,
+                'other_user': other_user
+            })
+        
+        return active_chats
+

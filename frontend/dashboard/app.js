@@ -555,9 +555,9 @@ function centerChatWindow() {
 function closeChatWindow() {
     const otherUsername = chatUserName.textContent;
     
-    // Emit close chat event to server
-    socket.emit('close_chat', {
-        otherUsername: otherUsername
+    // Emit end chat event to server
+    socket.emit('end_chat', {
+        other_user: otherUsername
     });
     
     // Close the window locally
@@ -569,8 +569,8 @@ function closeChatWindow() {
     centerChatWindow();
 }
 
-// Handle chat closed event
-socket.on('chat_closed', (data) => {
+// Handle chat ended event
+socket.on('chat_ended', (data) => {
     // Close the chat window if it's open with this user
     if (chatUserName.textContent === data.username) {
         chatWindow.style.display = 'none';
@@ -798,3 +798,14 @@ function updateUserStatus(updatedUser) {
         }
     });
 }
+
+// Handle tab/window close
+window.addEventListener('beforeunload', () => {
+    // If there's an active chat, send chat end event
+    if (chatWindow.style.display === 'block') {
+        const otherUser = chatUserName.textContent;
+        socket.emit('end_chat', {
+            other_user: otherUser
+        });
+    }
+});

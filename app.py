@@ -163,12 +163,29 @@ def handle_disconnect():
         token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
         username = token_data['username']
         
-        # Update user status to offline when disconnecting
+        # Get all active chats for this user
+        active_chats = db.GetActiveChats(username)
+        
+        # Clean up each active chat
+        for chat in active_chats:
+            other_user = chat['other_user']
+            chat_id = chat['chat_id']
+            
+            # Delete chat messages and chat entry
+            db.DeleteChat(chat_id)
+            
+            # Notify other user about chat closure
+            socketio.emit('chat_ended', {
+                'username': username
+            }, room=other_user)
+        
+        # Update user status to offline
         db.SetUserStatus(username, 'offline')
         
         # Broadcast updated user list to all clients
         users = db.GetAllUsers()
         emit('userList', {'users': users}, broadcast=True)
+        
     except:
         pass
 
@@ -404,6 +421,42 @@ def handle_close_chat(data):
         socketio.emit('chat_closed', {
             'username': current_username
         }, room=other_username)
+        
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+@socketio.on('end_chat')
+def handle_end_chat(data):
+    token = request.args.get('token')
+    try:
+        token_data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        current_username = token_data['username']
+        other_username = data['other_user']
+        
+        # Get chat ID
+        chat_id = db.GetChatID(current_username, other_username)
+        if not chat_id:
+            chat_id = db.GetChatID(other_username, current_username)
+        
+        if chat_id:
+            # Delete chat messages and chat entry
+            db.DeleteChat(chat_id)
+            
+            # Leave the chat room
+            leave_room(str(chat_id))
+            
+            # Update both users' status to idle
+            db.SetUserStatus(current_username, 'idle')
+            db.SetUserStatus(other_username, 'idle')
+            
+            # Broadcast status updates
+            users = db.GetAllUsers()
+            emit('userList', {'users': users}, broadcast=True)
+            
+            # Notify other user about chat closure
+            socketio.emit('chat_ended', {
+                'username': current_username
+            }, room=other_username)
         
     except Exception as e:
         emit('error', {'message': str(e)})
