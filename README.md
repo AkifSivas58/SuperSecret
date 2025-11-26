@@ -16,33 +16,33 @@
 
 ### 🔒 Privacy & Security by Design
 * **Ephemeral Messaging:** Chats are stored in temporary, dynamic SQLite tables (`Chat_{id}`). Once the session ends, the table is `DROPPED`, ensuring **zero data retention**.
-* **End-to-End Encryption:** All messages are encrypted using **Fernet (Symmetric Encryption)** before hitting the database[cite: 3, 6].
-* **Secure Authentication:** User passwords are hashed using **Bcrypt**[cite: 3].
+* **End-to-End Encryption:** All messages are encrypted using **Fernet (Symmetric Encryption)** before hitting the database.
+* **Secure Authentication:** User passwords are hashed using **Bcrypt**.
 
 ### 🤖 AI-Powered Content Guard (`MessageChecker.py`)
-Unlike standard chat apps, SuperSecret analyzes every message **before** it is delivered using NLP models[cite: 5]:
+Unlike standard chat apps, SuperSecret analyzes every message **before** it is delivered using NLP models:
 1.  **Translation Layer:** Automatically translates TR messages to EN using `Helsinki-NLP` for accurate analysis.
 2.  **Toxicity Detection:** Blocks offensive content using `RoBERTa` (cardiffnlp/twitter-roberta-base-offensive).
 3.  **Phishing/Malicious URL Shield:** Detects harmful links using `BERT` (kmack/malicious-url-detection).
 4.  **Spam Filter:** Identifies and blocks spam patterns using `roberta-spam`.
 
 ### ⚡ Modern Real-Time UI
-* **Socket.IO:** Instant message delivery, status updates (Online/Busy/Offline), and "Mind Connection" requests[cite: 3].
-* **Cyberpunk UI:** A responsive, dark-mode interface with particle network animations (`HTML5 Canvas`)[cite: 1, 2].
-* **Interactive Status:** Users can request private chats which lock their status to "Busy"[cite: 3].
+* **Socket.IO:** Instant message delivery, status updates (Online/Busy/Offline), and "Mind Connection" requests.
+* **Cyberpunk UI:** A responsive, dark-mode interface with particle network animations (`HTML5 Canvas`).
+* **Interactive Status:** Users can request private chats which lock their status to "Busy".
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Backend
-* **Framework:** Python Flask [cite: 3]
-* **Real-time Engine:** Flask-SocketIO [cite: 3]
-* **Database:** SQLite (Dynamic Table Architecture) [cite: 3]
+* **Framework:** Python Flask 
+* **Real-time Engine:** Flask-SocketIO 
+* **Database:** SQLite (Dynamic Table Architecture) 
 * **Security:** Cryptography (Fernet), Bcrypt, JWT (JSON Web Tokens) 
 
 ### Artificial Intelligence
-* **Libraries:** `transformers`, `torch` [cite: 5]
+* **Libraries:** `transformers`, `torch` 
 * **Models:**
     * `kmack/malicious-url-detection`
     * `mshenoda/roberta-spam`
@@ -50,9 +50,9 @@ Unlike standard chat apps, SuperSecret analyzes every message **before** it is d
     * `Helsinki-NLP/opus-mt-tc-big-tr-en`
 
 ### Frontend
-* **Core:** HTML5, CSS3 (Custom Variables), JavaScript (ES6+) [cite: 1, 2]
+* **Core:** HTML5, CSS3 (Custom Variables), JavaScript (ES6+) 
 * **Styling:** Bootstrap 5, FontAwesome [cite: 4]
-* **Visuals:** Custom Particle Network Animation (`script.js`) [cite: 2]
+* **Visuals:** Custom Particle Network Animation (`script.js`) 
 
 ---
 
