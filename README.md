@@ -5,7 +5,7 @@
 ![Security](https://img.shields.io/badge/Security-Fernet%20Encryption-green?style=for-the-badge&logo=lock)
 ![Realtime](https://img.shields.io/badge/Communication-Socket.IO-lightgrey?style=for-the-badge&logo=socket.io)
 
-> **SuperSecret** is a secure, real-time messaging platform developed during the **BTK Akademi Hackathon**. It features ephemeral chats that self-destruct upon closure and an AI-powered content moderation system that filters toxic language, spam, and malicious URLs in real-time.
+> **SuperSecret** is a secure, real-time messaging platform developed during the **HUCKATHON**. It features ephemeral chats that self-destruct upon closure and an AI-powered content moderation system that filters toxic language, spam, and malicious URLs in real-time.
 
 ---
 
@@ -62,3 +62,20 @@
    ```bash
    git clone [https://github.com/yourusername/SuperSecret.git](https://github.com/yourusername/SuperSecret.git)
    cd SuperSecret
+2. **Create a Virtual Environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+4. **Configure Environment Create a .env file in the root directory:**
+   ```bash
+   SECRET_KEY=your_secret_key
+   JWT_SECRET_KEY=your_jwt_secret
+   FERNET_KEY=your_fernet_key
+5. **Run the Application**
+   ```bash
+   python app.py
+
+The server will start at http://localhost:5000
