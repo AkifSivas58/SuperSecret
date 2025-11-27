@@ -9,7 +9,16 @@
 
 ---
 
-## 📸 Screenshots
+## 📸 Demo Video
+
+
+https://github.com/user-attachments/assets/25ca805f-ace2-4b4e-afdb-71148f7a43cc
+
+> **Demo Highlights:**
+> * **0:46** - Real-time "Mental Connection" request & acceptance.
+> * **1:06** - Trying to connect to a busy user triggers the "Mind Occupied" blocking protocol.
+> * **1:20** - Multi-session concurrency (4 simultaneous users).
+
 ---
 
 ## 🚀 Key Features
