@@ -19,17 +19,20 @@
 * **End-to-End Encryption:** All messages are encrypted using **Fernet (Symmetric Encryption)** before hitting the database.
 * **Secure Authentication:** User passwords are hashed using **Bcrypt**.
 
+### 🧠 "Mental Connection" Protocol (Session Locking)
+* **Exclusive Connectivity:** Following the project's lore, when two users establish a "Mental Connection" (start a chat), their status instantly updates to **Busy**.
+* **Request Blocking:** The system enforces strict session isolation; any incoming requests to a user already in a mental connection are automatically rejected, ensuring an uninterrupted and private experience.
+
 ### 🤖 AI-Powered Content Guard (`MessageChecker.py`)
 Unlike standard chat apps, SuperSecret analyzes every message **before** it is delivered using NLP models:
 1.  **Translation Layer:** Automatically translates TR messages to EN using `Helsinki-NLP` for accurate analysis.
-2.  **Toxicity Detection:** Blocks offensive content using `RoBERTa` (cardiffnlp/twitter-roberta-base-offensive).
-3.  **Phishing/Malicious URL Shield:** Detects harmful links using `BERT` (kmack/malicious-url-detection).
-4.  **Spam Filter:** Identifies and blocks spam patterns using `roberta-spam`.
+2.  **Toxicity Detection:** Blocks offensive content using `RoBERTa`.
+3.  **Phishing/Malicious URL Shield:** Detects harmful links using `BERT`.
+4.  **Spam Filter:** Identifies and blocks spam patterns.
 
 ### ⚡ Modern Real-Time UI
-* **Socket.IO:** Instant message delivery, status updates (Online/Busy/Offline), and "Mind Connection" requests.
+* **Socket.IO:** Instant message delivery and live status updates (Online/Busy/Offline).
 * **Cyberpunk UI:** A responsive, dark-mode interface with particle network animations (`HTML5 Canvas`).
-* **Interactive Status:** Users can request private chats which lock their status to "Busy".
 
 ---
 
